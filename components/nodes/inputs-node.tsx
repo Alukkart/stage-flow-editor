@@ -3,38 +3,35 @@
 import React from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Handle, Node, NodeProps, Position} from '@xyflow/react';
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
-import {useNodesStore} from "@/store/nodes-store";
+import {useEditor} from "@/components/editor-selectors";
+import {Handle, NodeProps, Position} from '@xyflow/react';
+import {InputsNodeProps} from "@/core/nodes/inputNode";
 
-type inputsNode = Node<{
-    vars?: string[]
-}, 'number'>;
-
-export function InputsNode({id, data}: NodeProps<inputsNode>) {
-    const {updateNodeData} = useNodesStore();
+export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
+    const {updateNode} = useEditor();
 
     const handleAddInput = () => {
-        const newVars = data.vars ? [...data.vars, `var${data.vars.length + 1}`] : ['var1'];
+        const newVars = data.variables ? [...data.variables, `var${data.variables.length + 1}`] : ['var1'];
 
-        updateNodeData(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (data) => ({ ...data, vars: newVars }));
     }
 
     const handleRemoveInput = (variable: string) => {
-        if (data.vars && data.vars.length === 0) return;
+        if (data.variables && data.variables.length === 0) return;
 
-        const newVars = data.vars ? data.vars.filter((v) => v !== variable): []
+        const newVars = data.variables ? data.variables.filter((v) => v !== variable): []
 
-        updateNodeData(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (data) => ({ ...data, vars: newVars }));
     }
 
     const handleInputChange = (index: number, value: string) => {
-        const newVars = data.vars ? [...data.vars] : [];
+        const newVars = data.variables ? [...data.variables] : [];
         newVars[index] = value;
 
-        updateNodeData(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (data) => ({ ...data, vars: newVars }));
     }
 
     return (
@@ -50,7 +47,7 @@ export function InputsNode({id, data}: NodeProps<inputsNode>) {
                 </CardHeader>
                 <CardContent className='flex flex-col gap-4 relative'>
                     {
-                        data?.vars?.map((variable: string, index) => (
+                        data?.variables?.map((variable: string, index) => (
                             <div className='flex justify-center gap-3' key={index}>
                                 <Input value={variable} onChange={(e) => {
                                     handleInputChange(index, e.target.value)

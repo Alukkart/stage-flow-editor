@@ -5,7 +5,7 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import React, {ReactNode} from "react";
-import {useNodesStore} from "@/store/nodes-store";
+import {useEditor} from "@/components/editor-selectors";
 
 interface Props{
     children: ReactNode,
@@ -13,13 +13,13 @@ interface Props{
 }
 
 export const NodeContextMenu: React.FC<Props> = ({ children, nodeId }) => {
-    const {deleteNode} = useNodesStore();
+    const {removeNode} = useEditor();
 
     return (
         <ContextMenu>
             <ContextMenuTrigger>{children}</ContextMenuTrigger>
             <ContextMenuContent>
-                <ContextMenuItem onClick={() => {deleteNode(nodeId)}}>Delete</ContextMenuItem>
+                <ContextMenuItem onClick={() => {removeNode(nodeId)}}>Delete</ContextMenuItem>
             </ContextMenuContent>
         </ContextMenu>
     )

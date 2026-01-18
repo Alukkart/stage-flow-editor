@@ -13,7 +13,7 @@ import { Handle, Node, NodeProps, Position } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { X, Plus } from "lucide-react";
 import { NodeContextMenu } from "@/components/node-context-menu";
-import {useNodesStore} from "@/store/nodes-store";
+import {useEditor} from "@/components/editor-selectors";
 
 type StageNode = Node<{
     arguments?: string[];
@@ -22,10 +22,10 @@ type StageNode = Node<{
 }, 'stage-node'>;
 
 export function StageNode({ id, data }: NodeProps<StageNode>) {
-    const { updateNodeData } = useNodesStore();
+    const { updateNode } = useEditor();
 
     const updateList = (key: 'arguments' | 'config' | 'outputs', value: string[]) => {
-        updateNodeData(id, (data) => ({ ...data, [key]: value }));
+        updateNode(id, (data) => ({ ...data, [key]: value }));
     };
 
     const addItem = (key: 'arguments' | 'config' | 'outputs', prefix: string) => {

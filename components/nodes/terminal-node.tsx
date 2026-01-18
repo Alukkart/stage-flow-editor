@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {Label} from "@/components/ui/label";
-import {useNodesStore} from "@/store/nodes-store";
+import {useEditor} from "@/components/editor-selectors";
 
 type TerminalNode = Node<{
     result: string;
@@ -16,12 +16,12 @@ type TerminalNode = Node<{
 }, 'number'>;
 
 export function TerminalNode({id, data}: NodeProps<TerminalNode>) {
-    const {updateNodeData} = useNodesStore();
+    const {updateNode} = useEditor();
 
     const handleAddArtifact = () => {
         const newArtifacts = data.artifacts ? [...data.artifacts, `art${data.artifacts.length + 1}`] : ['art1'];
 
-        updateNodeData(id, (data) => ({ ...data, artifacts: newArtifacts }));
+        updateNode(id, (data) => ({ ...data, artifacts: newArtifacts }));
     }
 
     const handleRemoveInput = (variable: string) => {
@@ -29,18 +29,18 @@ export function TerminalNode({id, data}: NodeProps<TerminalNode>) {
 
         const newArtifacts = data.artifacts ? data.artifacts.filter((v) => v !== variable) : []
 
-        updateNodeData(id, (data) => ({ ...data, vars: {artifacts: newArtifacts} }));
+        updateNode(id, (data) => ({ ...data, vars: {artifacts: newArtifacts} }));
     }
 
     const handleArtifactChange = (index: number, value: string) => {
         const newArtifacts = data.artifacts ? [...data.artifacts] : [];
         newArtifacts[index] = value;
 
-        updateNodeData(id, (data) => ({ ...data, artifacts: newArtifacts }));
+        updateNode(id, (data) => ({ ...data, artifacts: newArtifacts }));
     }
 
     const handleResultChange = (value: string) => {
-        updateNodeData(id, (data) => ({ ...data, result: value }));
+        updateNode(id, (data) => ({ ...data, result: value }));
     }
 
     return (

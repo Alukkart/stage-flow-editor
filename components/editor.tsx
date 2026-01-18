@@ -9,33 +9,46 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { useEditorSelector } from './editor-selectors';
-import {nodeTypes} from "@/core/nodes/node.types";
-import {NodesCatalog} from "@/components/nodes-catalog";
-import {useCallback} from "react";
+import { useEditor } from './editor-selectors';
+import { NodesCatalog } from "@/components/nodes-catalog";
+import React, { useCallback } from "react";
+import { BaseNode } from "@/core/nodes/baseNode";
+import { nodeTypes } from "@/core/nodes/nodeTypes";
 
-const fitViewOptions: FitViewOptions = { padding: 0.2, };
-const defaultEdgeOptions: DefaultEdgeOptions = { animated: true, deletable: true, };
+const fitViewOptions: FitViewOptions = {padding: 0.2};
+const defaultEdgeOptions: DefaultEdgeOptions = {animated: true, deletable: true,};
 
 export function Editor() {
     const {
         nodes,
         edges,
+
+        removeNode,
+        removeEdge,
+
         onNodesChange,
-        onEdgesChange,
-        onConnect,
-        deleteEdge
-    } = useEditorSelector();
+        onEdgesChange
+    } = useEditor();
+
+    const handleConnect = useCallback((connection: { source: string; target: string; }) => {
+        //asd
+    }, []);
+
+    const handleNodesRemove = useCallback((nodes: BaseNode[]) => {
+        nodes.map((node: BaseNode) => {
+            removeNode(node.id)
+        })
+    }, [removeNode]);
 
     const handleEdgesRemove = useCallback((edgesToDelete: Edge[]) => {
         edgesToDelete.map(edge => {
-            deleteEdge(edge.id)
+            removeEdge(edge.id)
         })
-    }, [deleteEdge])
+    }, [removeEdge])
 
     const handleEdgeRemove = useCallback((_event: React.MouseEvent, edge: Edge) => {
-        deleteEdge(edge.id)
-    }, [deleteEdge])
+        removeEdge(edge.id)
+    }, [removeEdge])
 
     return (
         <div className="h-screen w-screen">
@@ -43,12 +56,17 @@ export function Editor() {
                 colorMode='dark'
                 nodes={nodes}
                 edges={edges}
+
+                nodeTypes={nodeTypes}
+                onNodesDelete={handleNodesRemove}
+
                 onEdgeDoubleClick={handleEdgeRemove}
                 onEdgesDelete={handleEdgesRemove}
-                nodeTypes={nodeTypes}
+
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+
+                onConnect={handleConnect}
                 fitView
                 fitViewOptions={fitViewOptions}
                 defaultEdgeOptions={defaultEdgeOptions}

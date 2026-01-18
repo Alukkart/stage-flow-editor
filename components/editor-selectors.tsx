@@ -1,18 +1,24 @@
 import { useShallow } from 'zustand/react/shallow';
-import {useNodesStore} from "@/store/nodes-store";
+import { useGraphStore } from "@/store/graph-store";
 
-export const useEditorSelector = () =>
-    useNodesStore(
+export const useEditor = () =>
+    useGraphStore(
         useShallow(state => ({
             nodes: state.nodes,
             edges: state.edges,
+
+            addNode: state.addNode,
+            updateNode: state.updateNode,
+            removeNode: state.removeNode,
+            setNodes: state.setNodes,
+
+            addEdge: state.addEdge,
+            removeEdge: state.removeEdge,
+            setEdges: state.setEdges,
+
             onNodesChange: state.onNodesChange,
             onEdgesChange: state.onEdgesChange,
-            deleteNode: state.deleteNode,
-            deleteEdge: state.deleteEdge,
-            onConnect: state.onConnect,
-            undo: state.undo,
-            redo: state.redo,
-            autoLayoutNodes: state.autoLayoutNodes,
+
+            clear: state.clear,
         }))
     );

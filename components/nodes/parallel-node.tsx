@@ -3,46 +3,42 @@
 import React from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Handle, Node, NodeProps, Position} from '@xyflow/react';
+import {Handle, NodeProps, Position} from '@xyflow/react';
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {useNodesStore} from "@/store/nodes-store";
+import {useEditor} from "@/components/editor-selectors";
+import {ParallelNodeProps} from "@/core/nodes/parallelNode";
 
-type ParallelNode = Node<{
-    policy: string;
-    childrenNodes?: string[]
-}, 'number'>;
-
-export function ParallelNode({id, data}: NodeProps<ParallelNode>) {
-    const {updateNodeData} = useNodesStore();
+export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
+    const {updateNode} = useEditor();
 
     const handleAddChildren = () => {
-        const newChildren = data.childrenNodes ? [...data.childrenNodes, `art${data.childrenNodes.length + 1}`] : ['art1'];
+        const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, `art${data.childrenNodesIds.length + 1}`] : ['art1'];
 
-        updateNodeData(id, (data) => ({...data, childrenNodes: newChildren}));
+        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
     }
 
     const handleRemoveInput = (variable: string) => {
-        if (data.childrenNodes && data.childrenNodes.length === 0) return;
+        if (data.childrenNodesIds && data.childrenNodesIds.length === 0) return;
 
-        const newChildren = data.childrenNodes ? data.childrenNodes.filter((v) => v !== variable) : []
+        const newChildren = data.childrenNodesIds ? data.childrenNodesIds.filter((v) => v !== variable) : []
 
-        updateNodeData(id, (data) => ({...data, childrenNodes: newChildren}));
+        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
     }
 
     const handleChildrenChange = (index: number, value: string) => {
-        const newChildren = data.childrenNodes ? [...data.childrenNodes] : [];
+        const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds] : [];
         newChildren[index] = value;
 
-        updateNodeData(id, (data) => ({...data, childrenNodes: newChildren}));
+        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
 
     }
 
     const handlePolicyChange = (value: string) => {
-        updateNodeData(id, (data) => ({...data, policy: value}));
+        updateNode(id, (data) => ({...data, policy: value}));
     }
 
     return (
@@ -78,7 +74,7 @@ export function ParallelNode({id, data}: NodeProps<ParallelNode>) {
 
                     <div className='flex flex-col gap-4 relative px-6'>
                         {
-                            data?.childrenNodes?.map((artifact: string, index) => (
+                            data?.childrenNodesIds?.map((artifact: string, index) => (
                                 <div className='flex justify-center gap-3' key={index}>
                                     <Input value={artifact} onChange={(e) => {
                                         handleChildrenChange(index, e.target.value)
