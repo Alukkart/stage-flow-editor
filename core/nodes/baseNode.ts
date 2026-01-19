@@ -1,24 +1,27 @@
 import type {Node, XYPosition} from "@xyflow/react";
 import {NodeHandle} from "@xyflow/system";
 
-export abstract class BaseNode implements Node {
-    // xyflow node properties
+export abstract class BaseNode<TData extends Record<string, unknown> = Record<string, unknown>> implements Node<TData> {
     id: string;
     position: XYPosition;
-    handles: NodeHandle[] = []
+    handles: NodeHandle[] = [];
+    type: string;
+    data: TData;
 
-    abstract data: Record<string, unknown>
-
-    // custom properties
-    type: string
-
-    protected constructor(id: string, position: XYPosition, type: string) {
+    protected constructor(
+        id: string,
+        position: XYPosition,
+        type: string,
+        data: TData
+    ) {
         this.id = id;
         this.position = position;
         this.type = type;
+        this.data = data;
     }
 
-    setData(data: never): void {
+    setData(data: TData) {
         this.data = data;
     }
 }
+

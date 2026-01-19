@@ -13,7 +13,7 @@ import { useEditor } from './editor-selectors';
 import { NodesCatalog } from "@/components/nodes-catalog";
 import React, { useCallback } from "react";
 import { BaseNode } from "@/core/nodes/baseNode";
-import { nodeTypes } from "@/core/nodes/nodeTypes";
+import { nodeTypes} from "@/core/nodes/nodeTypes";
 
 const fitViewOptions: FitViewOptions = {padding: 0.2};
 const defaultEdgeOptions: DefaultEdgeOptions = {animated: true, deletable: true,};

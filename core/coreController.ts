@@ -4,7 +4,6 @@ import type {EdgeChange, NodeChange} from "@xyflow/react";
 import { applyNodeChanges as anc } from "@xyflow/react";
 import { applyEdgeChanges as aec } from "@xyflow/react";
 
-
 export class CoreController {
     private nodes: BaseNode[] = [];
     private edges: BaseEdge[] = [];
