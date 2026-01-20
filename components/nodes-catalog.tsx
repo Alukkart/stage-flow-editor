@@ -49,7 +49,7 @@ export const NodesCatalog = () => {
     const { addNode } = useGraphStore()
 
     const handleAddNode = (nodeClass: NodeClassType) => {
-        addNode(new nodeClass(uuid(), {x: x, y: y}, undefined));
+        addNode(new nodeClass(uuid(), {x: x, y: y}));
     }
 
     return (

@@ -9,7 +9,7 @@ export abstract class BaseHandle implements NodeHandle {
 
     purpose: string
 
-    constructor(purpose: string, type: HandleType, position: Position, x: number, y: number) {
+    protected constructor(purpose: string, type: HandleType, position: Position, x: number, y: number) {
         this.position = position;
         this.type = type;
         this.x = x;

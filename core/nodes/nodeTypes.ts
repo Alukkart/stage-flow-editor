@@ -1,15 +1,15 @@
-import {InputNode} from "@/core/nodes/inputNode";
+import {InputsNode} from "@/core/nodes/inputsNode";
 import {ParallelNode} from "@/core/nodes/parallelNode";
 import {InputsNodeComp} from "@/components/nodes/inputs-node";
 import {ParallelNodeComp} from "@/components/nodes/parallel-node";
 import {NodeTypes} from "@xyflow/react";
 
 export type NodeClassType =
-    typeof InputNode |
+    typeof InputsNode |
     typeof ParallelNode
 
 export const NodeClasses = {
-    inputNode: InputNode,
+    inputsNode: InputsNode,
     parallelNode: ParallelNode,
 }
 

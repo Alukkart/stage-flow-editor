@@ -7,16 +7,21 @@ import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {useEditor} from "@/components/editor-selectors";
-import {Handle, NodeProps, Position} from '@xyflow/react';
-import {InputsNodeProps} from "@/core/nodes/inputNode";
+import {Handle, NodeProps, Position, useUpdateNodeInternals} from '@xyflow/react';
+import {InputsNode, InputsNodeProps} from "@/core/nodes/inputsNode";
 
 export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
     const {updateNode} = useEditor();
+    const updateNodeInternals = useUpdateNodeInternals();
 
     const handleAddInput = () => {
         const newVars = data.variables ? [...data.variables, `var${data.variables.length + 1}`] : ['var1'];
 
-        updateNode(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (node) => {
+            return InputsNode.setData(node, {variables: newVars});
+        });
+
+        updateNodeInternals(id)
     }
 
     const handleRemoveInput = (variable: string) => {
@@ -24,14 +29,20 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
 
         const newVars = data.variables ? data.variables.filter((v) => v !== variable): []
 
-        updateNode(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (node) => {
+            return InputsNode.setData(node, {variables: newVars});
+        });
+
+        updateNodeInternals(id)
     }
 
     const handleInputChange = (index: number, value: string) => {
         const newVars = data.variables ? [...data.variables] : [];
         newVars[index] = value;
 
-        updateNode(id, (data) => ({ ...data, vars: newVars }));
+        updateNode(id, (node) => {
+            return InputsNode.setData(node, {variables: newVars});
+        });
     }
 
     return (
@@ -58,8 +69,6 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
                                 </Button>
 
                                 <Handle
-                                    key={`out-var-${index}`}
-                                    id={`out-var-${index}`}
                                     type="source"
                                     position={Position.Right}
                                     style={{
@@ -79,8 +88,8 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
                 </CardContent>
 
                 <Handle
-                    id="inputs-node-handle-bottom"
-                    type="target"
+                    id='1'
+                    type="source"
                     position={Position.Bottom}
                     style={{
                         width: 10,

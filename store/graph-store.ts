@@ -10,7 +10,7 @@ interface GraphState {
 
     // node actions
     addNode: (node: BaseNode) => void;
-    updateNode: (id: string, updater: (node: BaseNode) => void) => void;
+    updateNode: (id: string, updater: (node: BaseNode) => BaseNode) => void;
     removeNode: (id: string) => void;
     setNodes: (nodes: BaseNode[]) => void;
 
@@ -51,24 +51,13 @@ export const useGraphStore = create<GraphState>((set) => ({
         });
     },
 
-    updateNode: (id, updater) =>
-        set((state) => {
-            const nodes = state.nodes.map((node) => {
-                if (node.id !== id) return node;
+    updateNode: (id, updater) => {
+        controller.updateNode(id, updater);
 
-                const cloned = Object.assign(
-                    Object.create(Object.getPrototypeOf(node)),
-                    node
-                );
-
-                updater(cloned);
-
-                return cloned;
-            });
-
-            return { nodes };
-        }),
-
+        set({
+            nodes: [...controller.Nodes],
+        });
+    },
 
     setNodes: (nodes) => {
         controller.Nodes = nodes;

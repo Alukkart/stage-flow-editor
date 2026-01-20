@@ -3,22 +3,25 @@
 import React from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Handle, NodeProps, Position} from '@xyflow/react';
+import {Handle, NodeProps, Position, useUpdateNodeInternals} from '@xyflow/react';
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useEditor} from "@/components/editor-selectors";
-import {ParallelNodeProps} from "@/core/nodes/parallelNode";
+import {ParallelNode, ParallelNodeProps} from "@/core/nodes/parallelNode";
 
 export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
     const {updateNode} = useEditor();
+    const updateNodeInternals = useUpdateNodeInternals();
 
     const handleAddChildren = () => {
         const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, `art${data.childrenNodesIds.length + 1}`] : ['art1'];
 
-        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
+        updateNode(id, (node) => {
+            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+        });
     }
 
     const handleRemoveInput = (variable: string) => {
@@ -26,19 +29,24 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
 
         const newChildren = data.childrenNodesIds ? data.childrenNodesIds.filter((v) => v !== variable) : []
 
-        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
+        updateNode(id, (node) => {
+            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+        });
     }
 
     const handleChildrenChange = (index: number, value: string) => {
         const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds] : [];
         newChildren[index] = value;
 
-        updateNode(id, (data) => ({...data, childrenNodes: newChildren}));
-
+        updateNode(id, (node) => {
+            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+        });
     }
 
-    const handlePolicyChange = (value: string) => {
-        updateNode(id, (data) => ({...data, policy: value}));
+    const handlePolicyChange = (value: "all" | "any") => {
+        updateNode(id, (node) => {
+            return ParallelNode.setData(node, { ...data, policy: value  });
+        });
     }
 
     return (
@@ -85,8 +93,6 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
                                     </Button>
 
                                     <Handle
-                                        key={`in-${artifact}`}
-                                        id={`in-${artifact}`}
                                         type="target"
                                         position={Position.Right}
                                         style={{
@@ -107,7 +113,7 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
                 </CardContent>
 
                 <Handle
-                    id="parallel-node-handle-top"
+                    id='2'
                     type="target"
                     position={Position.Top}
                     style={{
@@ -117,7 +123,6 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
                 />
 
                 <Handle
-                    id="parallel-node-handle-botom"
                     type="source"
                     position={Position.Bottom}
                     style={{

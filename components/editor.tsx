@@ -30,10 +30,6 @@ export function Editor() {
         onEdgesChange
     } = useEditor();
 
-    const handleConnect = useCallback((connection: { source: string; target: string; }) => {
-        //asd
-    }, []);
-
     const handleNodesRemove = useCallback((nodes: BaseNode[]) => {
         nodes.map((node: BaseNode) => {
             removeNode(node.id)
@@ -50,6 +46,9 @@ export function Editor() {
         removeEdge(edge.id)
     }, [removeEdge])
 
+    console.log('Nodes:', nodes);
+    console.log('Edges:', edges);
+
     return (
         <div className="h-screen w-screen">
             <ReactFlow
@@ -65,8 +64,7 @@ export function Editor() {
 
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-
-                onConnect={handleConnect}
+                // onConnect={handleConnect}
                 fitView
                 fitViewOptions={fitViewOptions}
                 defaultEdgeOptions={defaultEdgeOptions}

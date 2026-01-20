@@ -3,10 +3,21 @@ import {BaseEdge} from "@/core/edges/baseEdge";
 import type {EdgeChange, NodeChange} from "@xyflow/react";
 import { applyNodeChanges as anc } from "@xyflow/react";
 import { applyEdgeChanges as aec } from "@xyflow/react";
+import {InputsNode} from "@/core/nodes/inputsNode";
+import {ParallelNode} from "@/core/nodes/parallelNode";
+import {DataEdge} from "@/core/edges/dataEdge";
+
+const DEFAULT_NODES: BaseNode[] = [
+    new InputsNode('1', { x: 0, y: 0 }, { variables: ['input1', 'input2'] }),
+    new ParallelNode('2', { x: 500, y: 500 }, { policy: 'all', childrenNodesIds: [] })
+];
+const DEFAULT_EDGES: BaseEdge[] = [
+    new DataEdge('1-2', '1', '2')
+];
 
 export class CoreController {
-    private nodes: BaseNode[] = [];
-    private edges: BaseEdge[] = [];
+    private nodes: BaseNode[] = DEFAULT_NODES;
+    private edges: BaseEdge[] = DEFAULT_EDGES;
 
     get Nodes() {
         return this.nodes;
@@ -26,6 +37,15 @@ export class CoreController {
 
     addNode(node: BaseNode) {
         this.nodes = [...this.nodes, node];
+    }
+
+    updateNode(id: string, updater: (node: BaseNode) => BaseNode) {
+        this.nodes = this.nodes.map(n => {
+            if (n.id === id) {
+                return updater(n);
+            }
+            return n;
+        });
     }
 
     removeNode(id: string) {
