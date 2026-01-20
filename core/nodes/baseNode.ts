@@ -1,10 +1,10 @@
 import type {Node, XYPosition} from "@xyflow/react";
-import {NodeHandle} from "@xyflow/system";
+import {BaseHandle} from "@/core/handles/baseHandle";
 
 export abstract class BaseNode<TData extends Record<string, unknown> = Record<string, unknown>> implements Node<TData> {
     id: string;
     position: XYPosition;
-    handles: NodeHandle[];
+    handles: BaseHandle[];
     type: string;
     data: TData;
 
@@ -13,7 +13,7 @@ export abstract class BaseNode<TData extends Record<string, unknown> = Record<st
         position: XYPosition,
         type: string,
         data: TData,
-        handles: NodeHandle[]
+        handles: BaseHandle[]
     ) {
         this.id = id;
         this.position = position;

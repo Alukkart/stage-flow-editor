@@ -5,14 +5,13 @@ import { applyNodeChanges as anc } from "@xyflow/react";
 import { applyEdgeChanges as aec } from "@xyflow/react";
 import {InputsNode} from "@/core/nodes/inputsNode";
 import {ParallelNode} from "@/core/nodes/parallelNode";
-import {DataEdge} from "@/core/edges/dataEdge";
 
 const DEFAULT_NODES: BaseNode[] = [
     new InputsNode('1', { x: 0, y: 0 }, { variables: ['input1', 'input2'] }),
     new ParallelNode('2', { x: 500, y: 500 }, { policy: 'all', childrenNodesIds: [] })
 ];
 const DEFAULT_EDGES: BaseEdge[] = [
-    new DataEdge('1-2', '1', '2')
+    // new DataEdge('1-2', '1', '2')
 ];
 
 export class CoreController {

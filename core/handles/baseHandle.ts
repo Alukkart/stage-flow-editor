@@ -1,20 +1,34 @@
+import {HandleType, Position, XYPosition} from "@xyflow/react";
 import {NodeHandle} from "@xyflow/system";
-import {HandleType, Position} from "@xyflow/react";
 
-export abstract class BaseHandle implements NodeHandle {
-    position: Position;
+export type HandleKind =
+    | "data"
+    | "order"
+
+export abstract class BaseHandle implements NodeHandle{
+    id: string;
     type: HandleType;
+    position: Position;
+    width: number = 10;
+    height: number = 10
     x: number;
-    y: number;
+    y: number
 
-    purpose: string
+    /** логический тип */
+    kind: HandleKind;
 
-    protected constructor(purpose: string, type: HandleType, position: Position, x: number, y: number) {
-        this.position = position;
+    protected constructor(
+        id: string,
+        type: HandleType,
+        XYposition: XYPosition,
+        position: Position,
+        kind: HandleKind
+    ) {
+        this.id = id;
         this.type = type;
-        this.x = x;
-        this.y = y;
-
-        this.purpose = purpose;
+        this.position = position;
+        this.kind = kind;
+        this.x = XYposition.x;
+        this.y = XYposition.y;
     }
 }

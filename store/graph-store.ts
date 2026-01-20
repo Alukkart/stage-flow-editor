@@ -2,13 +2,16 @@ import {create} from 'zustand';
 import {BaseEdge} from "@/core/edges/baseEdge";
 import {BaseNode} from "@/core/nodes/baseNode";
 import {CoreController} from "@/core/coreController";
-import {EdgeChange, NodeChange} from "@xyflow/react";
+import {Connection, EdgeChange, NodeChange} from "@xyflow/react";
+import {DataEdge} from "@/core/edges/dataEdge";
+import {v4 as uuid} from 'uuid';
 
 interface GraphState {
     nodes: BaseNode[];
     edges: BaseEdge[];
 
     // node actions
+    getNode: (id: string) => BaseNode | undefined;
     addNode: (node: BaseNode) => void;
     updateNode: (id: string, updater: (node: BaseNode) => BaseNode) => void;
     removeNode: (id: string) => void;
@@ -28,11 +31,15 @@ interface GraphState {
 
 const controller = new CoreController();
 
-export const useGraphStore = create<GraphState>((set) => ({
+export const useGraphStore = create<GraphState>((set, get) => ({
     nodes: controller.Nodes,
     edges: controller.Edges,
 
     // ---------------- NODES ----------------
+    getNode: (id: string) => {
+        return get().nodes.find(n => n.id === id);
+    },
+
     addNode: (node) => {
         controller.addNode(node);
 
@@ -110,6 +117,31 @@ export const useGraphStore = create<GraphState>((set) => ({
             edges: [...controller.Edges],
         });
     },
+
+    onConnect: (conn: Connection) => {
+        const sourceNode = controller.Nodes.find(n => n.id === conn.source);
+        const targetNode = controller.Nodes.find(n => n.id === conn.target);
+
+        const sourceHandle = sourceNode?.handles.find(h => h.id === conn.sourceHandle);
+        const targetHandle = targetNode?.handles.find(h => h.id === conn.targetHandle);
+
+        if (sourceHandle?.kind !== targetHandle?.kind) {
+            return; // запрет
+        }
+
+        controller.addEdge(
+            new DataEdge(
+                uuid(),
+                conn.source!,
+                conn.target!,
+            )
+        );
+
+        set({
+            edges: [...controller.Edges],
+        });
+    },
+
 
     // ---------------- GRAPH ----------------
     clear: () => {

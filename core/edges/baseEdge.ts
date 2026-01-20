@@ -4,8 +4,10 @@ export abstract class BaseEdge implements Edge {
     id: string;
     source: string;
     target: string;
+
     sourceHandle: string;
     targetHandle: string;
+
     type: string
 
     data: Record<string, unknown>;

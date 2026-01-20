@@ -7,6 +7,7 @@ export const useEditor = () =>
             nodes: state.nodes,
             edges: state.edges,
 
+            getNode: state.getNode,
             addNode: state.addNode,
             updateNode: state.updateNode,
             removeNode: state.removeNode,
