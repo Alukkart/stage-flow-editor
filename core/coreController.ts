@@ -1,22 +1,48 @@
 import {BaseNode} from "@/core/nodes/baseNode";
 import {BaseEdge} from "@/core/edges/baseEdge";
-import type {EdgeChange, NodeChange} from "@xyflow/react";
+import type {Connection, EdgeChange, NodeChange} from "@xyflow/react";
 import { applyNodeChanges as anc } from "@xyflow/react";
 import { applyEdgeChanges as aec } from "@xyflow/react";
-import {InputsNode} from "@/core/nodes/inputsNode";
-import {ParallelNode} from "@/core/nodes/parallelNode";
+import {DataEdge} from "@/core/edges/dataEdge";
+import {OrderEdge} from "@/core/edges/orderEdge";
 
-const DEFAULT_NODES: BaseNode[] = [
-    new InputsNode('1', { x: 0, y: 0 }, { variables: ['input1', 'input2'] }),
-    new ParallelNode('2', { x: 500, y: 500 }, { policy: 'all', childrenNodesIds: [] })
-];
-const DEFAULT_EDGES: BaseEdge[] = [
-    // new DataEdge('1-2', '1', '2')
-];
 
 export class CoreController {
-    private nodes: BaseNode[] = DEFAULT_NODES;
-    private edges: BaseEdge[] = DEFAULT_EDGES;
+    private nodes: BaseNode[] = [];
+    private edges: BaseEdge[] = [];
+
+    connect(conn: Connection){
+        console.debug("Connecting:", conn);
+        const sourceNode = this.nodes.find(n => n.id === conn.source);
+        const targetNode = this.nodes.find(n => n.id === conn.target);
+
+        console.log("Source Node:", sourceNode);
+        console.log("Target Node:", targetNode);
+
+        const sourceHandle = sourceNode?.handles.find(h => h.id === conn.sourceHandle) || null;
+        const targetHandle = targetNode?.handles.find(h => h.id === conn.targetHandle) || null;
+
+        if(sourceNode && targetNode && sourceHandle && targetHandle){
+            if(sourceHandle.kind !== targetHandle.kind) throw Error("Different handle kinds cannot be connected");
+
+            const edgeId = `${conn.source}-${conn.sourceHandle}-${conn.target}-${conn.targetHandle}`;
+            if (this.edges.some((edge) => edge.id === edgeId)) {
+                return;
+            }
+            switch(sourceHandle.kind){
+                case "data":
+                    const newDataEdge = new DataEdge(edgeId, conn.source!, conn.target!, conn.sourceHandle!, conn.targetHandle!);
+                    this.addEdge(newDataEdge);
+                    break;
+                case "order":
+                    const newOrderEdge = new OrderEdge(edgeId, conn.source!, conn.target!, conn.sourceHandle!, conn.targetHandle!);
+                    this.addEdge(newOrderEdge);
+                    break;
+            }
+        }else{
+            throw Error(`Connection error: not found ${!sourceNode ? 'source node' : ''} ${!targetNode ? 'target node' : ''} ${!sourceHandle ? 'source handle' : ''} ${!targetHandle ? 'target handle' : ''}`);
+        }
+    }
 
     get Nodes() {
         return this.nodes;

@@ -3,7 +3,7 @@
 import React from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Handle, NodeProps, Position, useUpdateNodeInternals} from '@xyflow/react';
+import {Handle, NodeProps, Position} from '@xyflow/react';
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
@@ -11,10 +11,13 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useEditor} from "@/components/editor-selectors";
 import {ParallelNode, ParallelNodeProps} from "@/core/nodes/parallelNode";
+import {InputsNode} from "@/core/nodes/inputsNode";
 
 export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
-    const {updateNode} = useEditor();
-    const updateNodeInternals = useUpdateNodeInternals();
+    const {updateNode, getNode} = useEditor();
+
+    const node = getNode(id) as InputsNode | undefined;
+    if (!node) return null;
 
     const handleAddChildren = () => {
         const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, `art${data.childrenNodesIds.length + 1}`] : ['art1'];
@@ -91,17 +94,24 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
                                     <Button size='icon' onClick={() => handleRemoveInput(artifact)}>
                                         <X/>
                                     </Button>
-
-                                    <Handle
-                                        type="target"
-                                        position={Position.Right}
-                                        style={{
-                                            top: 36 / 2 + (index * 52),
-                                            width: 10,
-                                            height: 10,
-                                        }}
-                                    />
                                 </div>
+                            ))
+                        }
+
+                        {
+                            node.handles.map((handle) => (
+                                handle.kind == 'data' && <Handle
+                                    key={handle.id}
+                                    id={handle.id}
+                                    type={handle.type}
+                                    position={handle.position}
+                                    style={{
+                                        width: handle.width,
+                                        height: handle.height,
+                                        left: handle.x - 5,
+                                        top: handle.y + 5
+                                    }}
+                                />
                             ))
                         }
                     </div>
@@ -112,24 +122,22 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
 
                 </CardContent>
 
-                <Handle
-                    id='2'
-                    type="target"
-                    position={Position.Top}
-                    style={{
-                        width: 10,
-                        height: 10,
-                    }}
-                />
-
-                <Handle
-                    type="source"
-                    position={Position.Bottom}
-                    style={{
-                        width: 10,
-                        height: 10,
-                    }}
-                />
+                {
+                    node.handles.map((handle) => (
+                        handle.kind == 'order' && <Handle
+                            key={handle.id}
+                            id={handle.id}
+                            type={handle.type}
+                            position={handle.position}
+                            style={{
+                                width: handle.width,
+                                height: handle.height,
+                                left: handle.x + 5,
+                                top: handle.position == Position.Bottom ? handle.y - 5 : handle.y + 5
+                            }}
+                        />
+                    ))
+                }
 
             </Card>
         </NodeContextMenu>

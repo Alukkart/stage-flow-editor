@@ -2,61 +2,134 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Sidebar, SidebarClose} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import React from "react";
-import {useViewport} from "@xyflow/react";
+import {useReactFlow} from "@xyflow/react";
 import {Separator} from "@/components/ui/separator";
 import {useGraphStore} from "@/store/graph-store";
 import { NodeClassType, NodeClasses } from "@/core/nodes/nodeTypes";
 import { v4 as uuid } from 'uuid';
-
-// const asd = {
-//     "SetValueStage": {
-//         "stage_name": "SetValueStage",
-//         "skipable": false,
-//         "allowed_events": [],
-//         "allowed_inputs": [],
-//         "category": "builtin.vars",
-//         "description": "Set value from arguments or config to the target path",
-//         "arguments": [
-//             {
-//                 "name": "value",
-//                 "type": "any",
-//                 "description": "Value to set (overrides config)",
-//                 "optional": false
-//             }
-//         ],
-//         "config": [
-//             {
-//                 "name": "value",
-//                 "type": "any",
-//                 "description": "Fallback value when argument is missing",
-//                 "optional": false
-//             }
-//         ],
-//         "outputs": [
-//             {
-//                 "name": "value",
-//                 "type": "any",
-//                 "description": "Value that was written",
-//                 "optional": false
-//             }
-//         ]
-//     },
-// }
+import {StageDefinition, StageNode} from "@/core/nodes/stageNode";
+import {autoLayoutNodes} from "@/lib/graph-layout";
+import {
+    buildGraphFromPipeline,
+    buildPipelineFromGraph,
+    parseStagePayload,
+    Pipeline,
+    StageDefinitionInput
+} from "@/lib/pipeline-io";
+import {NodesCatalogToolbar} from "@/components/nodes-catalog-toolbar";
+import {NodesCatalogList} from "@/components/nodes-catalog-list";
+import {ServerNodesList} from "@/components/server-nodes-list";
 
 export const NodesCatalog = () => {
     const [open, setOpen] = React.useState(true);
-    const {x, y} = useViewport();
-    const { addNode } = useGraphStore()
+    const reactFlow = useReactFlow();
+    const { addNode, setNodes, setEdges, clear } = useGraphStore()
+    const [remoteStages, setRemoteStages] = React.useState<StageDefinition[]>([]);
+    const [remoteError, setRemoteError] = React.useState<string | null>(null);
+    const [remoteLoading, setRemoteLoading] = React.useState(false);
+    const stagesUrl = process.env.NEXT_PUBLIC_STAGES_URL;
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+    const getCenterPosition = () => {
+        if (typeof window === "undefined") {
+            return {x: 0, y: 0};
+        }
+
+        return reactFlow.screenToFlowPosition({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+        });
+    };
 
     const handleAddNode = (nodeClass: NodeClassType) => {
-        addNode(new nodeClass(uuid(), {x: x, y: y}));
+        const position = getCenterPosition();
+        addNode(new nodeClass(uuid(), position));
     }
+
+    const handleAddStageNode = (stage: StageDefinition) => {
+        const position = getCenterPosition();
+        addNode(new StageNode(uuid(), position, {stage}));
+    }
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const parsed = JSON.parse(String(reader.result)) as Pipeline;
+                const {nodes: createdNodes, edges: createdEdges} = buildGraphFromPipeline(parsed, remoteStages);
+                setNodes(createdNodes);
+                setEdges(createdEdges);
+            } catch (error) {
+                console.error("Failed to import pipeline.json", error);
+            } finally {
+                event.target.value = "";
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleExport = () => {
+        const graph = useGraphStore.getState();
+        const pipeline = buildPipelineFromGraph(graph.nodes, graph.edges);
+
+        const blob = new Blob([JSON.stringify(pipeline, null, 2)], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "pipeline.json";
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleAutoLayout = () => {
+        const graph = useGraphStore.getState();
+        const nextNodes = autoLayoutNodes(graph.nodes, graph.edges);
+        setNodes(nextNodes);
+    };
+
+    React.useEffect(() => {
+        if (!stagesUrl) return;
+        let active = true;
+        setRemoteLoading(true);
+        setRemoteError(null);
+
+        fetch(stagesUrl)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load stages: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((payload: Record<string, StageDefinitionInput>) => {
+                if (!active) return;
+                setRemoteStages(parseStagePayload(payload));
+            })
+            .catch((error: Error) => {
+                if (!active) return;
+                setRemoteError(error.message);
+            })
+            .finally(() => {
+                if (!active) return;
+                setRemoteLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [stagesUrl]);
 
     return (
         <div className='space-y-3'>
             {
                 open ? (
-                    <Card className='min-w-xs rounded-sm'>
+                    <Card className='rounded-sm'>
                         <CardHeader className='flex items-center justify-between'>
                             <CardTitle>
                                 Nodes Catalog
@@ -66,30 +139,31 @@ export const NodesCatalog = () => {
                                 <SidebarClose/>
                             </Button>
                         </CardHeader>
+                        <CardContent className='pt-0 pb-0'>
+                            <NodesCatalogToolbar
+                                onImportClickAction={handleImportClick}
+                                onExportAction={handleExport}
+                                onLayoutAction={handleAutoLayout}
+                                onClearAction={clear}
+                                onImportFileAction={handleImportFile}
+                                fileInputRef={fileInputRef}
+                            />
+                        </CardContent>
                         <CardContent className='flex flex-col space-y-3'>
-                            {
-                                Object.entries(NodeClasses).map((node) => (
-                                    <Card className='p-4!' key={node[0]}
-                                          onClick={() => handleAddNode(node[1])}>
-                                        <CardContent className='px-0'>{node[0]}</CardContent>
-                                    </Card>
-                                ))
-                            }
+                            <NodesCatalogList
+                                entries={Object.entries(NodeClasses)}
+                                onSelectAction={handleAddNode}
+                            />
 
                             <Separator/>
 
-                            {/*{*/}
-                            {/*    Object.values(asd).map((stage) => (*/}
-                            {/*        <Card className='p-4!' key={stage.stage_name}*/}
-                            {/*              onClick={() => addNode({*/}
-                            {/*                  type: 'stageNode',*/}
-                            {/*                  position: {x: x, y: y},*/}
-                            {/*                  data: {stage}*/}
-                            {/*              })}>*/}
-                            {/*            <CardContent className='px-0'>{stage.stage_name}</CardContent>*/}
-                            {/*        </Card>*/}
-                            {/*    ))*/}
-                            {/*}*/}
+                            <ServerNodesList
+                                stages={remoteStages}
+                                isLoading={remoteLoading}
+                                error={remoteError}
+                                show={Boolean(stagesUrl || remoteStages.length > 0 || remoteLoading || remoteError)}
+                                onSelectAction={handleAddStageNode}
+                            />
 
                         </CardContent>
                     </Card>

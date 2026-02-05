@@ -5,6 +5,7 @@ export abstract class BaseNode<TData extends Record<string, unknown> = Record<st
     id: string;
     position: XYPosition;
     handles: BaseHandle[];
+    measured: { width: number; height: number;} | undefined;
     type: string;
     data: TData;
 

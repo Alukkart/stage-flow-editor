@@ -8,128 +8,122 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Handle, Node, NodeProps, Position } from "@xyflow/react";
-import { Button } from "@/components/ui/button";
-import { X, Plus } from "lucide-react";
-import { NodeContextMenu } from "@/components/node-context-menu";
+import {Handle, NodeProps, Position} from "@xyflow/react";
+import {NodeContextMenu} from "@/components/node-context-menu";
 import {useEditor} from "@/components/editor-selectors";
+import {StageNode, StageNodeProps} from "@/core/nodes/stageNode";
 
-type StageNode = Node<{
-    arguments?: string[];
-    config?: string[];
-    outputs?: string[];
-}, 'stage-node'>;
+const renderParamMeta = (type: string, optional?: boolean) => {
+    const optionalSuffix = optional ? "?" : "";
+    return `${type}${optionalSuffix}`;
+};
 
-export function StageNode({ id, data }: NodeProps<StageNode>) {
-    const { updateNode } = useEditor();
+export function StageNodeComp({id, data}: NodeProps<StageNodeProps>) {
+    const {getNode} = useEditor();
+    const node = getNode(id) as StageNode | undefined;
+    if (!node) return null;
 
-    const updateList = (key: 'arguments' | 'config' | 'outputs', value: string[]) => {
-        updateNode(id, (data) => ({ ...data, [key]: value }));
-    };
-
-    const addItem = (key: 'arguments' | 'config' | 'outputs', prefix: string) => {
-        const list = data[key] ?? [];
-        updateList(key, [...list, `${prefix}${list.length + 1}`]);
-    };
-
-    const removeItem = (key: 'arguments' | 'config' | 'outputs', name: string) => {
-        updateList(
-            key,
-            (data[key] ?? []).filter(v => v !== name)
-        );
-    };
-
-    const changeItem = (
-        key: 'arguments' | 'config' | 'outputs',
-        index: number,
-        value: string
-    ) => {
-        const list = [...(data[key] ?? [])];
-        list[index] = value;
-        updateList(key, list);
-    };
-
-    const renderSection = (
-        title: string,
-        keyName: 'arguments' | 'config' | 'outputs',
-        handleType: 'source' | 'target',
-        handlePosition: Position,
-        prefix: string
-    ) => (
-        <div className="flex flex-col gap-2 relative">
-            <div className="flex items-center justify-between px-6">
-                <span className="text-sm font-semibold">{title}</span>
-                <Button size="icon" variant="ghost" onClick={() => addItem(keyName, prefix)}>
-                    <Plus size={16} />
-                </Button>
-            </div>
-
-            {data[keyName]?.map((item, index) => (
-                <div key={item} className="relative flex items-center gap-2 px-6">
-                    <Input
-                        value={item}
-                        onChange={(e) => changeItem(keyName, index, e.target.value)}
-                    />
-
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeItem(keyName, item)}
-                    >
-                        <X size={16} />
-                    </Button>
-
-                    <Handle
-                        id={`${keyName}-${item}`}
-                        type={handleType}
-                        position={handlePosition}
-                        style={{
-                            top: 32 / 2 + index,
-                            width: 10,
-                            height: 10,
-                        }}
-                    />
-                </div>
-            ))}
-        </div>
-    );
+    const stage = data.stage;
+    const dataHandles = node.handles.filter((handle) => handle.kind === "data");
+    const orderHandles = node.handles.filter((handle) => handle.kind === "order");
 
     return (
         <NodeContextMenu nodeId={id}>
-            <Card className="w-sm">
-
-                <Handle
-                    id={`${id}-top-handle`}
-                    type={"target"}
-                    position={Position.Top}
-                    style={{
-                        width: 10,
-                        height: 10,
-                    }}
-                />
-
+            <Card className="w-sm relative">
                 <CardHeader>
-                    <CardTitle>Stage Node</CardTitle>
-                    <CardDescription>Dynamic stage configuration</CardDescription>
+                    <CardTitle>{stage.stage_name}</CardTitle>
+                    <CardDescription>{stage.description}</CardDescription>
                 </CardHeader>
 
                 <CardContent className="flex flex-col gap-6 relative px-0">
-                    {renderSection('Arguments', 'arguments', 'target', Position.Left, 'arg')}
-                    {renderSection('Outputs', 'outputs', 'source', Position.Right, 'out')}
-                    {renderSection('Config', 'config', 'target', Position.Left, 'cfg')}
+                    <div className="flex flex-col gap-2">
+                        <span className="px-6 text-sm font-semibold">Arguments</span>
+                        {stage.arguments.length === 0 ? (
+                            <span className="px-6 text-xs text-muted-foreground">No arguments</span>
+                        ) : (
+                            stage.arguments.map((arg) => (
+                                <div key={arg.name} className="flex flex-col gap-1 px-6 py-1">
+                                    <span className="text-sm">{arg.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {renderParamMeta(arg.type, arg.optional)}
+                                    </span>
+                                    {arg.description && (
+                                        <span className="text-xs text-muted-foreground">{arg.description}</span>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <span className="px-6 text-sm font-semibold">Outputs</span>
+                        {stage.outputs.length === 0 ? (
+                            <span className="px-6 text-xs text-muted-foreground">No outputs</span>
+                        ) : (
+                            stage.outputs.map((output) => (
+                                <div key={output.name} className="flex flex-col gap-1 px-6 py-1">
+                                    <span className="text-sm">{output.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {renderParamMeta(output.type, output.optional)}
+                                    </span>
+                                    {output.description && (
+                                        <span className="text-xs text-muted-foreground">{output.description}</span>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <span className="px-6 text-sm font-semibold">Config</span>
+                        {stage.config.length === 0 ? (
+                            <span className="px-6 text-xs text-muted-foreground">No config</span>
+                        ) : (
+                            stage.config.map((cfg) => (
+                                <div key={cfg.name} className="flex flex-col gap-1 px-6 py-1">
+                                    <span className="text-sm">{cfg.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {renderParamMeta(cfg.type, cfg.optional)}
+                                    </span>
+                                    {cfg.description && (
+                                        <span className="text-xs text-muted-foreground">{cfg.description}</span>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </CardContent>
 
-                <Handle
-                    id={`${id}-bottom-handle`}
-                    type={"source"}
-                    position={Position.Bottom}
-                    style={{
-                        width: 10,
-                        height: 10,
-                    }}
-                />
+                {dataHandles.map((handle) => (
+                    <Handle
+                        key={handle.id}
+                        id={handle.id}
+                        type={handle.type}
+                        position={handle.position}
+                        style={{
+                            width: handle.width,
+                            height: handle.height,
+                            left: handle.x - 5,
+                            top: handle.y + 5,
+                        }}
+                    />
+                ))}
 
+                {orderHandles.map((handle) => (
+                    <Handle
+                        key={handle.id}
+                        id={handle.id}
+                        type={handle.type}
+                        position={handle.position}
+                        style={{
+                            width: handle.width,
+                            height: handle.height,
+                            left: handle.x + 5,
+                            top: handle.position === Position.Top ? handle.y + 5 : undefined,
+                            bottom: handle.position === Position.Bottom ? -5 : undefined,
+                        }}
+                    />
+                ))}
             </Card>
         </NodeContextMenu>
     );

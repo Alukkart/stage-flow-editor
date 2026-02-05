@@ -16,6 +16,7 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
     const node = getNode(id) as InputsNode | undefined;
     if (!node) return null;
 
+
     const handleAddInput = () => {
         const newVars = data.variables ? [...data.variables, `var${data.variables.length + 1}`] : ['var1'];
 
@@ -75,7 +76,7 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
                                 handle.kind == 'data' && <Handle
                                     key={handle.id}
                                     id={handle.id}
-                                    type="source"
+                                    type={handle.type}
                                     position={handle.position}
                                     style={{
                                         width: handle.width,
@@ -98,13 +99,13 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
                             handle.kind == 'order' && <Handle
                                 key={handle.id}
                                 id={handle.id}
-                                type="source"
+                                type={handle.type}
                                 position={handle.position}
                                 style={{
                                     width: handle.width,
                                     height: handle.height,
-                                    left: handle.x - 5,
-                                    top: handle.y + 5
+                                    left: handle.x + 5,
+                                    top: handle.y - 5
                                 }}
                             />
                         ))

@@ -1,8 +1,8 @@
 import {BaseHandle} from "@/core/handles/baseHandle";
-import {Position} from "@xyflow/react";
+import {HandleType, Position} from "@xyflow/react";
 
 export class OrderHandle extends BaseHandle {
-    constructor(id: string, x: number, y: number) {
-        super(id, "source", {x: x, y: y}, Position.Bottom, "order");
+    constructor(id: string, type: HandleType, x: number, y: number, pos?: Position) {
+        super(id, type, {x: x, y: y}, pos || Position.Bottom, "order");
     }
 }

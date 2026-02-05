@@ -3,13 +3,12 @@ import {BaseEdge} from "@/core/edges/baseEdge";
 import {BaseNode} from "@/core/nodes/baseNode";
 import {CoreController} from "@/core/coreController";
 import {Connection, EdgeChange, NodeChange} from "@xyflow/react";
-import {DataEdge} from "@/core/edges/dataEdge";
-import {v4 as uuid} from 'uuid';
 
 interface GraphState {
     nodes: BaseNode[];
     edges: BaseEdge[];
 
+    onConnect: (connection: Connection) => void;
     // node actions
     getNode: (id: string) => BaseNode | undefined;
     addNode: (node: BaseNode) => void;
@@ -119,23 +118,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     },
 
     onConnect: (conn: Connection) => {
-        const sourceNode = controller.Nodes.find(n => n.id === conn.source);
-        const targetNode = controller.Nodes.find(n => n.id === conn.target);
-
-        const sourceHandle = sourceNode?.handles.find(h => h.id === conn.sourceHandle);
-        const targetHandle = targetNode?.handles.find(h => h.id === conn.targetHandle);
-
-        if (sourceHandle?.kind !== targetHandle?.kind) {
-            return; // запрет
-        }
-
-        controller.addEdge(
-            new DataEdge(
-                uuid(),
-                conn.source!,
-                conn.target!,
-            )
-        );
+        controller.connect(conn)
 
         set({
             edges: [...controller.Edges],
