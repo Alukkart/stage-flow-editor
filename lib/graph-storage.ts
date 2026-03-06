@@ -7,6 +7,7 @@ import {DataEdge} from "@/core/edges/dataEdge";
 import {OrderEdge} from "@/core/edges/orderEdge";
 import {ConditionNode} from "@/core/nodes/conditionNode";
 import {TerminalNode} from "@/core/nodes/terminalNode";
+import {EdgeLineStyle, EdgeStyleSettings} from "@/store/graph-store";
 
 export const GRAPH_STORAGE_KEY = "stage-flow-editor.graph";
 
@@ -36,9 +37,36 @@ type SerializedEdge = {
 export type SerializedGraph = {
     nodes: SerializedNode[];
     edges: SerializedEdge[];
+    edgeStyleSettings?: EdgeStyleSettings;
 };
 
-export const serializeGraph = (nodes: BaseNode[], edges: BaseEdge[]): SerializedGraph => ({
+const isValidLineStyle = (value: unknown): value is EdgeLineStyle =>
+    value === "solid" || value === "dashed" || value === "dotted";
+
+const isValidEdgeStyleSettings = (value: unknown): value is EdgeStyleSettings => {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Record<string, unknown>;
+    const keys = ["flow", "data", "input"] as const;
+
+    return keys.every((key) => {
+        const config = candidate[key];
+        if (!config || typeof config !== "object") return false;
+
+        const typed = config as Record<string, unknown>;
+        return (
+            typeof typed.visible === "boolean" &&
+            typeof typed.color === "string" &&
+            typeof typed.width === "number" &&
+            isValidLineStyle(typed.style)
+        );
+    });
+};
+
+export const serializeGraph = (
+    nodes: BaseNode[],
+    edges: BaseEdge[],
+    edgeStyleSettings?: EdgeStyleSettings,
+): SerializedGraph => ({
     nodes: nodes.map((node) => ({
         id: node.id,
         type: node.type,
@@ -60,6 +88,7 @@ export const serializeGraph = (nodes: BaseNode[], edges: BaseEdge[]): Serialized
         markerEnd: edge.markerEnd,
         hidden: edge.hidden,
     })),
+    edgeStyleSettings,
 });
 
 export const deserializeGraph = (graph: SerializedGraph) => {
@@ -116,5 +145,9 @@ export const deserializeGraph = (graph: SerializedGraph) => {
         }
     });
 
-    return {nodes, edges};
+    const edgeStyleSettings = isValidEdgeStyleSettings(graph.edgeStyleSettings)
+        ? graph.edgeStyleSettings
+        : undefined;
+
+    return {nodes, edges, edgeStyleSettings};
 };

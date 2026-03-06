@@ -5,7 +5,7 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import React, {ReactNode} from "react";
-import {useEditor} from "@/components/editor-selectors";
+import {useGraphStore} from "@/store/graph-store";
 
 interface Props{
     children: ReactNode,
@@ -13,7 +13,7 @@ interface Props{
 }
 
 export const NodeContextMenu: React.FC<Props> = ({ children, nodeId }) => {
-    const {removeNode} = useEditor();
+    const removeNode = useGraphStore((state) => state.removeNode);
 
     return (
         <ContextMenu>

@@ -9,7 +9,7 @@ import {Handle, NodeProps, Position, useUpdateNodeInternals} from "@xyflow/react
 import {Plus, X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {ConditionItem, ConditionNode, ConditionNodeProps} from "@/core/nodes/conditionNode";
-import {useEditor} from "@/components/editor-selectors";
+import {useGraphStore} from "@/store/graph-store";
 
 const defaultConditionLogic = () => ({"==": [{var: ""}, ""]});
 
@@ -45,7 +45,8 @@ const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
 };
 
 export function ConditionNodeComp({id, data}: NodeProps<ConditionNodeProps>) {
-    const {getNode, updateNode, setEdges, edges} = useEditor();
+    const updateNode = useGraphStore((state) => state.updateNode);
+    const setEdges = useGraphStore((state) => state.setEdges);
     const updateNodeInternals = useUpdateNodeInternals();
     const internalsKey = [
         (data.conditions ?? []).map((condition) => condition.then).join("|"),
@@ -57,8 +58,6 @@ export function ConditionNodeComp({id, data}: NodeProps<ConditionNodeProps>) {
     const elseRef = useRef<HTMLDivElement>(null);
     const [thenTops, setThenTops] = useState<Record<number, number>>({});
     const [elseTop, setElseTop] = useState<number>(0);
-
-    const node = getNode(id) as ConditionNode | undefined;
 
     const measureHandles = useCallback(() => {
         const container = containerRef.current;
@@ -103,8 +102,6 @@ export function ConditionNodeComp({id, data}: NodeProps<ConditionNodeProps>) {
         return () => observer.disconnect();
     }, [measureHandles]);
 
-    if (!node) return null;
-
     const handleUpdateCondition = (index: number, next: ConditionItem) => {
         const conditions = [...data.conditions];
         conditions[index] = next;
@@ -121,8 +118,9 @@ export function ConditionNodeComp({id, data}: NodeProps<ConditionNodeProps>) {
         const normalized = conditions.length === 0 ? [{if: defaultConditionLogic(), then: ""}] : conditions;
         updateNode(id, (node) => ConditionNode.setData(node, {...data, conditions: normalized}));
 
+        const currentEdges = useGraphStore.getState().edges;
         setEdges(
-            edges
+            currentEdges
                 .filter((edge) => !(edge.source === id && edge.sourceHandle === `flow-then-${index}`))
                 .map((edge) => {
                     if (edge.source !== id) return edge;

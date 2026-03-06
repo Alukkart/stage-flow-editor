@@ -23,7 +23,12 @@ import {ServerNodesList} from "@/components/server-nodes-list";
 export const NodesCatalog = () => {
     const [open, setOpen] = React.useState(true);
     const reactFlow = useReactFlow();
-    const { addNode, setNodes, setEdges, clear } = useGraphStore()
+    const addNode = useGraphStore((state) => state.addNode);
+    const setNodes = useGraphStore((state) => state.setNodes);
+    const setGraph = useGraphStore((state) => state.setGraph);
+    const clear = useGraphStore((state) => state.clear);
+    const edgeStyleSettings = useGraphStore((state) => state.edgeStyleSettings);
+    const updateEdgeStyleSetting = useGraphStore((state) => state.updateEdgeStyleSetting);
     const [remoteStages, setRemoteStages] = React.useState<StageDefinition[]>([]);
     const [remoteError, setRemoteError] = React.useState<string | null>(null);
     const [remoteLoading, setRemoteLoading] = React.useState(false);
@@ -64,8 +69,7 @@ export const NodesCatalog = () => {
             try {
                 const parsed = JSON.parse(String(reader.result)) as Pipeline;
                 const {nodes: createdNodes, edges: createdEdges} = buildGraphFromPipeline(parsed, remoteStages);
-                setNodes(createdNodes);
-                setEdges(createdEdges);
+                setGraph(createdNodes, createdEdges);
             } catch (error) {
                 console.error("Failed to import pipeline.json", error);
             } finally {
@@ -126,30 +130,32 @@ export const NodesCatalog = () => {
     }, [stagesUrl]);
 
     return (
-        <div className='space-y-3'>
+        <div className='w-64 space-y-2'>
+            <NodesCatalogToolbar
+                onImportClickAction={handleImportClick}
+                onExportAction={handleExport}
+                onLayoutAction={handleAutoLayout}
+                onClearAction={clear}
+                onImportFileAction={handleImportFile}
+                fileInputRef={fileInputRef}
+                edgeStyleSettings={edgeStyleSettings}
+                onEdgeStyleChangeAction={updateEdgeStyleSetting}
+            />
+
             {
                 open ? (
-                    <Card className='rounded-sm'>
-                        <CardHeader className='flex items-center justify-between'>
-                            <CardTitle>
+                    <Card className='w-full rounded-sm'>
+                        <CardHeader className='flex items-center justify-between px-4'>
+                            <CardTitle className='text-base'>
                                 Nodes Catalog
                             </CardTitle>
 
-                            <Button size='icon' variant='ghost' onClick={() => setOpen(false)}>
+                            <Button size='icon-sm' variant='ghost' onClick={() => setOpen(false)}>
                                 <SidebarClose/>
                             </Button>
                         </CardHeader>
-                        <CardContent className='pt-0 pb-0'>
-                            <NodesCatalogToolbar
-                                onImportClickAction={handleImportClick}
-                                onExportAction={handleExport}
-                                onLayoutAction={handleAutoLayout}
-                                onClearAction={clear}
-                                onImportFileAction={handleImportFile}
-                                fileInputRef={fileInputRef}
-                            />
-                        </CardContent>
-                        <CardContent className='flex flex-col space-y-3'>
+
+                        <CardContent className='flex min-w-0 flex-col space-y-2 overflow-hidden px-4'>
                             <NodesCatalogList
                                 entries={Object.entries(NodeClasses)}
                                 onSelectAction={handleAddNode}

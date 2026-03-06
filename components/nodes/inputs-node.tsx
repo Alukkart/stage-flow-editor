@@ -6,9 +6,9 @@ import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
-import {useEditor} from "@/components/editor-selectors";
 import {Handle, NodeProps, Position, useUpdateNodeInternals} from '@xyflow/react';
 import {InputsNode, InputsNodeProps} from "@/core/nodes/inputsNode";
+import {useGraphStore} from "@/store/graph-store";
 
 const shallowEqual = (a: Record<string, number>, b: Record<string, number>) => {
     const aKeys = Object.keys(a);
@@ -31,14 +31,13 @@ const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
 };
 
 export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
-    const {updateNode, getNode, setEdges, edges} = useEditor();
+    const updateNode = useGraphStore((state) => state.updateNode);
+    const setEdges = useGraphStore((state) => state.setEdges);
     const updateNodeInternals = useUpdateNodeInternals();
     const internalsKey = (data.variables ?? []).join("|");
     const containerRef = useRef<HTMLDivElement>(null);
     const outRefs = useMemo(() => new Map<string, HTMLDivElement | null>(), []);
     const [outTops, setOutTops] = useState<Record<string, number>>({});
-
-    const node = getNode(id) as InputsNode | undefined;
 
     const measureHandles = useCallback(() => {
         const container = containerRef.current;
@@ -69,8 +68,6 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
         return () => observer.disconnect();
     }, [measureHandles]);
 
-    if (!node) return null;
-
     const handleAddInput = () => {
         const used = new Set(data.variables ?? []);
         let suffix = (data.variables?.length ?? 0) + 1;
@@ -96,7 +93,8 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
 
         if (!removedName) return;
         const sourceHandle = `out-${removedName}`;
-        setEdges(edges.filter((edge) => !(edge.source === id && edge.sourceHandle === sourceHandle)));
+        const currentEdges = useGraphStore.getState().edges;
+        setEdges(currentEdges.filter((edge) => !(edge.source === id && edge.sourceHandle === sourceHandle)));
     }
 
     const handleInputChange = (index: number, value: string) => {
@@ -112,8 +110,9 @@ export function InputsNodeComp({id, data}: NodeProps<InputsNodeProps>) {
 
         const prevSourceHandle = `out-${previous}`;
         const nextSourceHandle = `out-${value}`;
+        const currentEdges = useGraphStore.getState().edges;
         setEdges(
-            edges.map((edge) => {
+            currentEdges.map((edge) => {
                 if (edge.source === id && edge.sourceHandle === prevSourceHandle) {
                     return {
                         ...edge,

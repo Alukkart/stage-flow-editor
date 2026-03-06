@@ -8,8 +8,8 @@ import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {Label} from "@/components/ui/label";
-import {useEditor} from "@/components/editor-selectors";
 import {TerminalNode, TerminalNodeProps} from "@/core/nodes/terminalNode";
+import {useGraphStore} from "@/store/graph-store";
 
 const shallowEqual = (a: Record<number, number>, b: Record<number, number>) => {
     const aKeys = Object.keys(a);
@@ -32,14 +32,13 @@ const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
 };
 
 export function TerminalNodeComp({id, data}: NodeProps<TerminalNodeProps>) {
-    const {updateNode, getNode, setEdges, edges} = useEditor();
+    const updateNode = useGraphStore((state) => state.updateNode);
+    const setEdges = useGraphStore((state) => state.setEdges);
     const updateNodeInternals = useUpdateNodeInternals();
     const internalsKey = `${data.result ?? ""}::${(data.artifacts ?? []).join("|")}`;
     const containerRef = useRef<HTMLDivElement>(null);
     const artifactRefs = useMemo(() => new Map<number, HTMLDivElement | null>(), []);
     const [artifactTops, setArtifactTops] = useState<Record<number, number>>({});
-
-    const node = getNode(id) as TerminalNode | undefined;
 
     const measureHandles = useCallback(() => {
         const container = containerRef.current;
@@ -70,8 +69,6 @@ export function TerminalNodeComp({id, data}: NodeProps<TerminalNodeProps>) {
         return () => observer.disconnect();
     }, [measureHandles]);
 
-    if (!node) return null;
-
     const handleAddArtifact = () => {
         const newArtifacts = [...(data.artifacts ?? []), ""];
         updateNode(id, (node) => TerminalNode.setData(node, {...data, artifacts: newArtifacts}));
@@ -81,8 +78,9 @@ export function TerminalNodeComp({id, data}: NodeProps<TerminalNodeProps>) {
         const newArtifacts = (data.artifacts ?? []).filter((_, i) => i !== index);
         updateNode(id, (node) => TerminalNode.setData(node, {...data, artifacts: newArtifacts}));
 
+        const currentEdges = useGraphStore.getState().edges;
         setEdges(
-            edges
+            currentEdges
                 .filter((edge) => !(edge.target === id && edge.targetHandle === `artifact-${index}`))
                 .map((edge) => {
                     if (edge.target !== id) return edge;

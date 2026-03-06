@@ -9,8 +9,8 @@ import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {useEditor} from "@/components/editor-selectors";
 import {ParallelNode, ParallelNodeProps} from "@/core/nodes/parallelNode";
+import {useGraphStore} from "@/store/graph-store";
 
 const shallowEqual = (a: Record<number, number>, b: Record<number, number>) => {
     const aKeys = Object.keys(a);
@@ -33,14 +33,13 @@ const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
 };
 
 export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
-    const {updateNode, getNode, setEdges, edges} = useEditor();
+    const updateNode = useGraphStore((state) => state.updateNode);
+    const setEdges = useGraphStore((state) => state.setEdges);
     const updateNodeInternals = useUpdateNodeInternals();
     const internalsKey = `${data.policy ?? "all"}::${(data.childrenNodesIds ?? []).join("|")}`;
     const containerRef = useRef<HTMLDivElement>(null);
     const childRefs = useMemo(() => new Map<number, HTMLDivElement | null>(), []);
     const [childTops, setChildTops] = useState<Record<number, number>>({});
-
-    const node = getNode(id) as ParallelNode | undefined;
 
     const measureHandles = useCallback(() => {
         const container = containerRef.current;
@@ -71,8 +70,6 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
         return () => observer.disconnect();
     }, [measureHandles]);
 
-    if (!node) return null;
-
     const handleAddChildren = () => {
         const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, ""] : [""];
 
@@ -88,8 +85,9 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
             return ParallelNode.setData(node, {...data, childrenNodesIds: newChildren});
         });
 
+        const currentEdges = useGraphStore.getState().edges;
         setEdges(
-            edges
+            currentEdges
                 .filter((edge) => !(edge.source === id && edge.sourceHandle === `flow-child-${index}`))
                 .map((edge) => {
                     if (edge.source !== id) return edge;

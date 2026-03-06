@@ -14,17 +14,17 @@ type Props = {
 };
 
 export const ServerNodesList: React.FC<Props> = ({
-     stages,
-     isLoading,
-     error,
-     show,
-     onSelectAction,
+         stages,
+         isLoading,
+         error,
+         show,
+         onSelectAction,
     }) => {
     if (!show) return null;
 
     return (
-        <>
-            <div className='px-0 py-2 text-sm font-semibold'>Server Nodes</div>
+        <div className='w-full min-w-0'>
+            <div className='px-0 py-1 text-sm font-semibold'>Server Nodes</div>
 
             {isLoading && (
                 <CardContent className='px-0 text-xs text-muted-foreground'>
@@ -38,17 +38,22 @@ export const ServerNodesList: React.FC<Props> = ({
                 </CardContent>
             )}
 
-            <ScrollArea className='h-[40vh]'>
-                <div className='space-y-2 mr-3'>
+            <ScrollArea className='h-[30vh] w-full overflow-hidden'>
+                <div className='w-full min-w-0 space-y-1.5 pr-2'>
                     {stages.map((stage) => (
-                        <Card className='p-4! cursor-pointer' key={stage.stage_name}
-                              onClick={() => onSelectAction(stage)}>
-                            <CardContent className='px-0'>{stage.stage_name}</CardContent>
+                        <Card
+                            className='w-full max-w-full min-w-0 cursor-pointer overflow-hidden border-border/80 bg-background/60 px-3 py-2 hover:bg-accent/40'
+                            key={stage.stage_name}
+                            onClick={() => onSelectAction(stage)}
+                        >
+                            <CardContent className='w-full min-w-0 px-0 text-sm leading-5 break-all whitespace-normal'>
+                                {stage.stage_name}
+                            </CardContent>
                         </Card>
                     ))}
                 </div>
             </ScrollArea>
 
-        </>
+        </div>
     );
 };

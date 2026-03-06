@@ -13,8 +13,12 @@ type Props<T> = {
 export const NodesCatalogList = <T,>({entries, onSelectAction}: Props<T>) => (
     <>
         {entries.map(([key, value]) => (
-            <Card className='p-4! cursor-pointer' key={key} onClick={() => onSelectAction(value)}>
-                <CardContent className='px-0'>{key}</CardContent>
+            <Card
+                className='cursor-pointer border-border/80 bg-background/60 px-3 py-2 hover:bg-accent/40'
+                key={key}
+                onClick={() => onSelectAction(value)}
+            >
+                <CardContent className='px-0 text-sm leading-5'>{key}</CardContent>
             </Card>
         ))}
     </>

@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stage Flow Editor
 
-## Getting Started
+Visual node editor for building AI pipeline graphs with flow + data connections, auto-layout, and JSON import/export.
 
-First, run the development server:
+## Demo
+
+Live demo: https://stage-flow-editor.vercel.app/
+
+## What it does
+
+- Build pipelines as a graph of connected nodes.
+- Distinguish flow edges (execution order) and data edges (variables).
+- Support dynamic handles for node fields (arguments, outputs, artifacts, branches).
+- Import/export pipeline JSON.
+- Auto-layout graph using Dagre (draft-like behavior).
+- Persist editor state to `localStorage`.
+
+## Supported node types
+
+- `inputsNode` - pipeline inputs and variable producers.
+- `stageNode` - server stage with dynamic args/config/outputs.
+- `parallelNode` - fan-out children with `all` / `any` policy.
+- `conditionNode` - branch by JSON logic (`then` / `else`).
+- `terminalNode` - final result + artifacts sink.
+
+## Tech stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- `@xyflow/react` (React Flow)
+- Zustand (graph state)
+- Dagre (auto-layout)
+- shadcn/ui + Radix UI
+
+## Local development
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment (optional, for remote stage catalog)
+
+```bash
+NEXT_PUBLIC_STAGES_URL=https://your-server/stages.json
+```
+
+If `NEXT_PUBLIC_STAGES_URL` is set, the editor loads server stages into the catalog.
+
+### 3. Run dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - start dev server (webpack mode).
+- `npm run dev:turbo` - start dev server with Turbopack.
+- `npm run build` - production build.
+- `npm run start` - run production server.
+- `npm run lint` - ESLint checks.
 
-## Learn More
+## Import/Export format
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Import expects a pipeline JSON (`api_version`, `entry`, `nodes`).
+- Export generates pipeline JSON from current graph.
+- During import, graph is automatically laid out.

@@ -12,14 +12,37 @@ import '@xyflow/react/dist/style.css';
 
 import { useEditor } from './editor-selectors';
 import { NodesCatalog } from "@/components/nodes-catalog";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { BaseNode } from "@/core/nodes/baseNode";
 import {edgeTypes, nodeTypes} from "@/core/nodes/nodeTypes";
-import {useGraphStore} from "@/store/graph-store";
+import {EdgeLineStyle, EdgeStyleKind, useGraphStore} from "@/store/graph-store";
 import {deserializeGraph, GRAPH_STORAGE_KEY, SerializedGraph, serializeGraph} from "@/lib/graph-storage";
 
 const fitViewOptions: FitViewOptions = {padding: 0.2};
 const defaultEdgeOptions: DefaultEdgeOptions = {animated: true, deletable: true,};
+
+const toDashArray = (style: EdgeLineStyle) => {
+    if (style === "dashed") return "5,5";
+    if (style === "dotted") return "2,2";
+    return undefined;
+};
+
+const resolveEdgeStyleKind = (edge: Edge, sourceTypeById: Map<string, string>): EdgeStyleKind => {
+    if (edge.type === "orderEdge") {
+        return "flow";
+    }
+
+    const sourceType = sourceTypeById.get(edge.source);
+    if (sourceType === "inputsNode") {
+        return "input";
+    }
+
+    if (typeof edge.label === "string" && edge.label.startsWith("inputs.")) {
+        return "input";
+    }
+
+    return "data";
+};
 
 const getMiniMapNodeColor = (node: BaseNode) => {
     switch (node.type) {
@@ -68,6 +91,10 @@ export function Editor() {
 
         onConnect,
     } = useEditor();
+    const edgeStyleSettings = useGraphStore((state) => state.edgeStyleSettings);
+    const setGraph = useGraphStore((state) => state.setGraph);
+    const undo = useGraphStore((state) => state.undo);
+    const redo = useGraphStore((state) => state.redo);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -76,23 +103,64 @@ export function Editor() {
         if (stored) {
             try {
                 const parsed = JSON.parse(stored) as SerializedGraph;
-                const {nodes: restoredNodes, edges: restoredEdges} = deserializeGraph(parsed);
-                useGraphStore.getState().setNodes(restoredNodes);
-                useGraphStore.getState().setEdges(restoredEdges);
+                const {
+                    nodes: restoredNodes,
+                    edges: restoredEdges,
+                    edgeStyleSettings: restoredEdgeStyleSettings,
+                } = deserializeGraph(parsed);
+                setGraph(restoredNodes, restoredEdges, restoredEdgeStyleSettings, false);
             } catch (error) {
                 console.error("Failed to restore graph from localStorage", error);
             }
         }
 
+        let saveTimer: ReturnType<typeof setTimeout> | null = null;
         const unsubscribe = useGraphStore.subscribe((state) => {
-            const payload = serializeGraph(state.nodes, state.edges);
-            window.localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(payload));
+            if (saveTimer) {
+                clearTimeout(saveTimer);
+            }
+
+            saveTimer = setTimeout(() => {
+                const payload = serializeGraph(state.nodes, state.edges, state.edgeStyleSettings);
+                window.localStorage.setItem(GRAPH_STORAGE_KEY, JSON.stringify(payload));
+            }, 250);
         });
 
         return () => {
+            if (saveTimer) {
+                clearTimeout(saveTimer);
+            }
             unsubscribe();
         };
-    }, []);
+    }, [setGraph]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const isMeta = event.ctrlKey || event.metaKey;
+            if (!isMeta || event.altKey) return;
+
+            const key = event.key.toLowerCase();
+            if (key === "z") {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    redo();
+                    return;
+                }
+                undo();
+                return;
+            }
+
+            if (key === "y") {
+                event.preventDefault();
+                redo();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [undo, redo]);
 
     const handleConnect = useCallback((connection: Connection) => {
         onConnect(connection);
@@ -114,15 +182,36 @@ export function Editor() {
         removeEdge(edge.id)
     }, [removeEdge])
 
+    const renderedEdges = useMemo(() => {
+        const sourceTypeById = new Map(nodes.map((node) => [node.id, node.type]));
+
+        return edges.map((edge) => {
+            const styleKind = resolveEdgeStyleKind(edge, sourceTypeById);
+            const config = edgeStyleSettings[styleKind];
+
+            return {
+                ...edge,
+                hidden: !config.visible,
+                style: {
+                    ...edge.style,
+                    stroke: config.color,
+                    strokeWidth: config.width,
+                    strokeDasharray: toDashArray(config.style),
+                },
+            };
+        });
+    }, [edges, nodes, edgeStyleSettings]);
+
     return (
         <div className="h-screen w-screen">
             <ReactFlowProvider>
                 <ReactFlow
                     colorMode='dark'
                     nodes={nodes}
-                    edges={edges}
+                    edges={renderedEdges}
                     minZoom={0.02}
                     maxZoom={2}
+                    onlyRenderVisibleElements
 
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
@@ -148,7 +237,12 @@ export function Editor() {
                         nodeColor={(node) => getMiniMapNodeColor(node as BaseNode)}
                         nodeStrokeColor={(node) => getMiniMapStrokeColor(node as BaseNode)}
                         nodeBorderRadius={4}
-                        maskColor="rgba(2, 6, 23, 0.55)"
+                        bgColor="var(--card)"
+                        maskColor="rgba(0, 0, 0, 0.35)"
+                        style={{
+                            border: "1px solid var(--border)",
+                            borderRadius: 8,
+                        }}
                     />
                     <Controls />
 

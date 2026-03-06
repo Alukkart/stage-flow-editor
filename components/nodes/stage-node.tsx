@@ -13,8 +13,8 @@ import {Button} from "@/components/ui/button";
 import {Handle, NodeProps, Position, useUpdateNodeInternals} from "@xyflow/react";
 import {Plus, X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
-import {useEditor} from "@/components/editor-selectors";
 import {StageNode, StageNodeProps, StageParam} from "@/core/nodes/stageNode";
+import {useGraphStore} from "@/store/graph-store";
 
 const renderParamMeta = (type: string, optional?: boolean) => {
     const optionalSuffix = optional ? "?" : "";
@@ -41,11 +41,11 @@ const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
     return offsetTop + element.offsetHeight / 2;
 };
 
-export function StageNodeComp({id}: NodeProps<StageNodeProps>) {
-    const {getNode, updateNode, setEdges, edges} = useEditor();
+export function StageNodeComp({id, data}: NodeProps<StageNodeProps>) {
+    const updateNode = useGraphStore((state) => state.updateNode);
+    const setEdges = useGraphStore((state) => state.setEdges);
     const updateNodeInternals = useUpdateNodeInternals();
-    const node = getNode(id) as StageNode | undefined;
-    const stage = node?.data.stage;
+    const stage = data.stage;
     const internalsKey = [
         stage?.arguments.map((param) => param.name).join("|") ?? "",
         stage?.outputs.map((param) => param.name).join("|") ?? "",
@@ -115,7 +115,7 @@ export function StageNodeComp({id}: NodeProps<StageNodeProps>) {
         return () => observer.disconnect();
     }, [measureHandles]);
 
-    if (!node || !stage) return null;
+    if (!stage) return null;
 
     const updateStageSection = (
         section: "arguments" | "config" | "outputs",
@@ -159,16 +159,17 @@ export function StageNodeComp({id}: NodeProps<StageNodeProps>) {
         updateStageSection(section, nextParams);
 
         if (!removed) return;
+        const currentEdges = useGraphStore.getState().edges;
 
         if (section === "arguments") {
             const targetHandle = `arg-${removed.name}`;
-            setEdges(edges.filter((edge) => !(edge.target === id && edge.targetHandle === targetHandle)));
+            setEdges(currentEdges.filter((edge) => !(edge.target === id && edge.targetHandle === targetHandle)));
             return;
         }
 
         if (section === "outputs") {
             const sourceHandle = `out-${removed.name}`;
-            setEdges(edges.filter((edge) => !(edge.source === id && edge.sourceHandle === sourceHandle)));
+            setEdges(currentEdges.filter((edge) => !(edge.source === id && edge.sourceHandle === sourceHandle)));
         }
     };
 
@@ -228,7 +229,6 @@ export function StageNodeComp({id}: NodeProps<StageNodeProps>) {
                             />
                             <Button
                                 size="icon"
-                                variant="ghost"
                                 onClick={() => handleRemoveParam(section, index)}
                             >
                                 <X size={16}/>
