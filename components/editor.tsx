@@ -21,6 +21,40 @@ import {deserializeGraph, GRAPH_STORAGE_KEY, SerializedGraph, serializeGraph} fr
 const fitViewOptions: FitViewOptions = {padding: 0.2};
 const defaultEdgeOptions: DefaultEdgeOptions = {animated: true, deletable: true,};
 
+const getMiniMapNodeColor = (node: BaseNode) => {
+    switch (node.type) {
+        case "stageNode":
+            return "#3b82f6"; // all server stage nodes
+        case "inputsNode":
+            return "#d97706";
+        case "parallelNode":
+            return "#8b5cf6";
+        case "conditionNode":
+            return "#eab308";
+        case "terminalNode":
+            return "#10b981";
+        default:
+            return "#64748b";
+    }
+};
+
+const getMiniMapStrokeColor = (node: BaseNode) => {
+    switch (node.type) {
+        case "stageNode":
+            return "#93c5fd";
+        case "inputsNode":
+            return "#fcd34d";
+        case "parallelNode":
+            return "#c4b5fd";
+        case "conditionNode":
+            return "#fde047";
+        case "terminalNode":
+            return "#6ee7b7";
+        default:
+            return "#cbd5e1";
+    }
+};
+
 export function Editor() {
     const {
         nodes,
@@ -65,13 +99,13 @@ export function Editor() {
     }, [onConnect]);
 
     const handleNodesRemove = useCallback((nodes: BaseNode[]) => {
-        nodes.map((node: BaseNode) => {
+        nodes.forEach((node: BaseNode) => {
             removeNode(node.id)
         })
     }, [removeNode]);
 
     const handleEdgesRemove = useCallback((edgesToDelete: Edge[]) => {
-        edgesToDelete.map(edge => {
+        edgesToDelete.forEach(edge => {
             removeEdge(edge.id)
         })
     }, [removeEdge])
@@ -80,9 +114,6 @@ export function Editor() {
         removeEdge(edge.id)
     }, [removeEdge])
 
-    console.log('Nodes:', nodes);
-    console.log('Edges:', edges);
-
     return (
         <div className="h-screen w-screen">
             <ReactFlowProvider>
@@ -90,6 +121,8 @@ export function Editor() {
                     colorMode='dark'
                     nodes={nodes}
                     edges={edges}
+                    minZoom={0.02}
+                    maxZoom={2}
 
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
@@ -109,7 +142,14 @@ export function Editor() {
                     proOptions={{hideAttribution: true}}
                 >
                     <Background />
-                    <MiniMap zoomable pannable />
+                    <MiniMap
+                        zoomable
+                        pannable
+                        nodeColor={(node) => getMiniMapNodeColor(node as BaseNode)}
+                        nodeStrokeColor={(node) => getMiniMapStrokeColor(node as BaseNode)}
+                        nodeBorderRadius={4}
+                        maskColor="rgba(2, 6, 23, 0.55)"
+                    />
                     <Controls />
 
                     <Panel position='top-left'>

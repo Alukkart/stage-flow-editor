@@ -11,6 +11,12 @@ export abstract class BaseEdge implements Edge {
     type: string
 
     data: Record<string, unknown>;
+    className?: string;
+    label?: string;
+    style?: Record<string, unknown>;
+    animated?: boolean;
+    markerEnd?: Edge["markerEnd"];
+    hidden?: boolean;
 
     protected constructor(id: string, source: string, target: string, sourceHandle: string, targetHandle: string, data: Record<string, unknown> = {}, type: string) {
         this.id = id;

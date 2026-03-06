@@ -4,7 +4,7 @@ import {BaseHandle} from "@/core/handles/baseHandle";
 export abstract class BaseNode<TData extends Record<string, unknown> = Record<string, unknown>> implements Node<TData> {
     id: string;
     position: XYPosition;
-    handles: BaseHandle[];
+    connectors: BaseHandle[];
     measured: { width: number; height: number;} | undefined;
     type: string;
     data: TData;
@@ -14,13 +14,12 @@ export abstract class BaseNode<TData extends Record<string, unknown> = Record<st
         position: XYPosition,
         type: string,
         data: TData,
-        handles: BaseHandle[]
+        connectors: BaseHandle[]
     ) {
         this.id = id;
         this.position = position;
         this.type = type;
         this.data = data;
-        this.handles = handles;
+        this.connectors = connectors;
     }
 }
-

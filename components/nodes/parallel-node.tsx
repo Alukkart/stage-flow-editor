@@ -1,9 +1,9 @@
 'use client'
 
-import React from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Handle, NodeProps, Position} from '@xyflow/react';
+import {Handle, NodeProps, Position, useUpdateNodeInternals} from '@xyflow/react';
 import {Button} from "@/components/ui/button";
 import {X} from "lucide-react";
 import {NodeContextMenu} from "@/components/node-context-menu";
@@ -11,30 +11,98 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useEditor} from "@/components/editor-selectors";
 import {ParallelNode, ParallelNodeProps} from "@/core/nodes/parallelNode";
-import {InputsNode} from "@/core/nodes/inputsNode";
+
+const shallowEqual = (a: Record<number, number>, b: Record<number, number>) => {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+        if (a[Number(key)] !== b[Number(key)]) return false;
+    }
+    return true;
+};
+
+const getRelativeCenterTop = (element: HTMLElement, container: HTMLElement) => {
+    let offsetTop = element.offsetTop;
+    let parent = element.offsetParent as HTMLElement | null;
+    while (parent && parent !== container) {
+        offsetTop += parent.offsetTop;
+        parent = parent.offsetParent as HTMLElement | null;
+    }
+    return offsetTop + element.offsetHeight / 2;
+};
 
 export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
-    const {updateNode, getNode} = useEditor();
+    const {updateNode, getNode, setEdges, edges} = useEditor();
+    const updateNodeInternals = useUpdateNodeInternals();
+    const internalsKey = `${data.policy ?? "all"}::${(data.childrenNodesIds ?? []).join("|")}`;
+    const containerRef = useRef<HTMLDivElement>(null);
+    const childRefs = useMemo(() => new Map<number, HTMLDivElement | null>(), []);
+    const [childTops, setChildTops] = useState<Record<number, number>>({});
 
-    const node = getNode(id) as InputsNode | undefined;
+    const node = getNode(id) as ParallelNode | undefined;
+
+    const measureHandles = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const nextChildTops: Record<number, number> = {};
+        childRefs.forEach((element, index) => {
+            if (!element) return;
+            nextChildTops[index] = getRelativeCenterTop(element, container);
+        });
+
+        if (!shallowEqual(childTops, nextChildTops)) {
+            setChildTops(nextChildTops);
+            requestAnimationFrame(() => updateNodeInternals(id));
+        }
+    }, [childRefs, childTops, id, updateNodeInternals]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => measureHandles(), 0);
+        return () => clearTimeout(timer);
+    }, [measureHandles, internalsKey]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        const observer = new ResizeObserver(() => measureHandles());
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [measureHandles]);
+
     if (!node) return null;
 
     const handleAddChildren = () => {
-        const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, `art${data.childrenNodesIds.length + 1}`] : ['art1'];
+        const newChildren = data.childrenNodesIds ? [...data.childrenNodesIds, ""] : [""];
 
         updateNode(id, (node) => {
-            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+            return ParallelNode.setData(node, {...data, childrenNodesIds: newChildren});
         });
     }
 
-    const handleRemoveInput = (variable: string) => {
-        if (data.childrenNodesIds && data.childrenNodesIds.length === 0) return;
-
-        const newChildren = data.childrenNodesIds ? data.childrenNodesIds.filter((v) => v !== variable) : []
+    const handleRemoveChild = (index: number) => {
+        const newChildren = (data.childrenNodesIds ?? []).filter((_, i) => i !== index);
 
         updateNode(id, (node) => {
-            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+            return ParallelNode.setData(node, {...data, childrenNodesIds: newChildren});
         });
+
+        setEdges(
+            edges
+                .filter((edge) => !(edge.source === id && edge.sourceHandle === `flow-child-${index}`))
+                .map((edge) => {
+                    if (edge.source !== id) return edge;
+                    const sourceHandle = edge.sourceHandle ?? "";
+                    if (!sourceHandle.startsWith("flow-child-")) return edge;
+                    const childIndex = Number(sourceHandle.replace("flow-child-", ""));
+                    if (Number.isNaN(childIndex) || childIndex < index) return edge;
+                    return {
+                        ...edge,
+                        sourceHandle: `flow-child-${childIndex - 1}`,
+                    };
+                }),
+        );
     }
 
     const handleChildrenChange = (index: number, value: string) => {
@@ -42,19 +110,19 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
         newChildren[index] = value;
 
         updateNode(id, (node) => {
-            return ParallelNode.setData(node, { ...data, childrenNodesIds: newChildren  });
+            return ParallelNode.setData(node, {...data, childrenNodesIds: newChildren});
         });
     }
 
     const handlePolicyChange = (value: "all" | "any") => {
         updateNode(id, (node) => {
-            return ParallelNode.setData(node, { ...data, policy: value  });
+            return ParallelNode.setData(node, {...data, policy: value});
         });
     }
 
     return (
         <NodeContextMenu nodeId={id}>
-            <Card className='w-sm'>
+            <Card className='w-sm relative' ref={containerRef}>
                 <CardHeader>
                     <CardTitle>
                         Parallel Node
@@ -68,7 +136,7 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
                         <Label className='mb-2'>
                             Policy
                         </Label>
-                        <Select defaultValue='all' onValueChange={handlePolicyChange}>
+                        <Select value={data.policy ?? "all"} onValueChange={handlePolicyChange}>
                             <SelectTrigger className="w-full">
                                 <SelectValue/>
                             </SelectTrigger>
@@ -85,33 +153,22 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
 
                     <div className='flex flex-col gap-4 relative px-6'>
                         {
-                            data?.childrenNodesIds?.map((artifact: string, index) => (
-                                <div className='flex justify-center gap-3' key={index}>
-                                    <Input value={artifact} onChange={(e) => {
+                            data?.childrenNodesIds?.map((childNodeId: string, index) => (
+                                <div
+                                    className='relative flex justify-center gap-3'
+                                    key={index}
+                                    ref={(element) => {
+                                        childRefs.set(index, element);
+                                    }}
+                                >
+                                    <Input value={childNodeId} onChange={(e) => {
                                         handleChildrenChange(index, e.target.value)
                                     }}/>
 
-                                    <Button size='icon' onClick={() => handleRemoveInput(artifact)}>
+                                    <Button size='icon' onClick={() => handleRemoveChild(index)}>
                                         <X/>
                                     </Button>
                                 </div>
-                            ))
-                        }
-
-                        {
-                            node.handles.map((handle) => (
-                                handle.kind == 'data' && <Handle
-                                    key={handle.id}
-                                    id={handle.id}
-                                    type={handle.type}
-                                    position={handle.position}
-                                    style={{
-                                        width: handle.width,
-                                        height: handle.height,
-                                        left: handle.x - 5,
-                                        top: handle.y + 5
-                                    }}
-                                />
                             ))
                         }
                     </div>
@@ -122,22 +179,29 @@ export function ParallelNodeComp({id, data}: NodeProps<ParallelNodeProps>) {
 
                 </CardContent>
 
-                {
-                    node.handles.map((handle) => (
-                        handle.kind == 'order' && <Handle
-                            key={handle.id}
-                            id={handle.id}
-                            type={handle.type}
-                            position={handle.position}
+                <Handle id="flow-input" type="target" position={Position.Top} style={{top: -6, width: 10, height: 10}}/>
+                <Handle id="flow-next" type="source" position={Position.Bottom} style={{bottom: -6, width: 10, height: 10}}/>
+
+                {Object.keys(childTops).map((key) => {
+                    const index = Number(key);
+                    return (
+                        <Handle
+                            key={`flow-child-${index}`}
+                            id={`flow-child-${index}`}
+                            type="source"
+                            position={Position.Right}
                             style={{
-                                width: handle.width,
-                                height: handle.height,
-                                left: handle.x + 5,
-                                top: handle.position == Position.Bottom ? handle.y - 5 : handle.y + 5
+                                right: -8,
+                                top: `${childTops[index]}px`,
+                                width: 10,
+                                height: 10,
+                                transform: "translateY(-50%)",
+                                background: "#a78bfa",
+                                border: "2px solid white",
                             }}
                         />
-                    ))
-                }
+                    );
+                })}
 
             </Card>
         </NodeContextMenu>

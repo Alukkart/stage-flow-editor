@@ -17,7 +17,7 @@ export const NodeContextMenu: React.FC<Props> = ({ children, nodeId }) => {
 
     return (
         <ContextMenu>
-            <ContextMenuTrigger>{children}</ContextMenuTrigger>
+            <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
             <ContextMenuContent>
                 <ContextMenuItem onClick={() => {removeNode(nodeId)}}>Delete</ContextMenuItem>
             </ContextMenuContent>

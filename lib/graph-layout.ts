@@ -1,88 +1,191 @@
+import dagre from "dagre";
 import {BaseNode} from "@/core/nodes/baseNode";
 import {BaseEdge} from "@/core/edges/baseEdge";
 import {InputsNode} from "@/core/nodes/inputsNode";
 import {ParallelNode} from "@/core/nodes/parallelNode";
 import {StageNode} from "@/core/nodes/stageNode";
+import {ConditionNode} from "@/core/nodes/conditionNode";
+import {TerminalNode} from "@/core/nodes/terminalNode";
 
-export const autoLayoutNodes = (nodes: BaseNode[], edges: BaseEdge[]) => {
-    const orderEdges = edges.filter((edge) => edge.type === "orderEdge");
-    const nodeIds = nodes.map((node) => node.id);
-    const incomingCount = new Map<string, number>();
-    const outgoing = new Map<string, string[]>();
+export type LayoutConfig = {
+    nodesep: number;
+    ranksep: number;
+    branchOffset: number;
+};
 
-    nodeIds.forEach((id) => {
-        incomingCount.set(id, 0);
-        outgoing.set(id, []);
-    });
+const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
+    nodesep: 400,
+    ranksep: 400,
+    branchOffset: 700,
+};
 
-    orderEdges.forEach((edge) => {
-        if (!incomingCount.has(edge.target)) return;
-        incomingCount.set(edge.target, (incomingCount.get(edge.target) ?? 0) + 1);
-        outgoing.get(edge.source)?.push(edge.target);
-    });
-
-    const queue = nodeIds.filter((id) => (incomingCount.get(id) ?? 0) === 0);
-    const levels = new Map<string, number>();
-    let index = 0;
-
-    while (index < queue.length) {
-        const current = queue[index++];
-        const currentLevel = levels.get(current) ?? 0;
-        levels.set(current, currentLevel);
-
-        (outgoing.get(current) ?? []).forEach((next) => {
-            const nextCount = (incomingCount.get(next) ?? 0) - 1;
-            incomingCount.set(next, nextCount);
-            if (nextCount === 0) {
-                levels.set(next, currentLevel + 1);
-                queue.push(next);
-            }
-        });
+const estimateNodeSize = (node: BaseNode) => {
+    if (node.type === "stageNode") {
+        const stageNode = node as StageNode;
+        const argsCount = stageNode.data.stage.arguments.length;
+        const outputsCount = stageNode.data.stage.outputs.length;
+        const configCount = stageNode.data.stage.config.length;
+        const h = 70 + (argsCount + outputsCount + configCount) * 26 + 12;
+        return {w: 380, h};
     }
 
-    const maxLevel = Math.max(0, ...Array.from(levels.values()));
-    nodeIds.forEach((id) => {
-        if (!levels.has(id)) {
-            levels.set(id, maxLevel + 1);
+    if (node.type === "conditionNode") {
+        const conditionNode = node as ConditionNode;
+        const h = 140 + Math.max(conditionNode.data.conditions.length, 1) * 92;
+        return {w: 380, h};
+    }
+
+    if (node.type === "parallelNode") {
+        const parallelNode = node as ParallelNode;
+        const h = 160 + Math.max(parallelNode.data.childrenNodesIds.length, 1) * 56;
+        return {w: 380, h};
+    }
+
+    if (node.type === "terminalNode") {
+        const terminalNode = node as TerminalNode;
+        const h = 140 + Math.max(terminalNode.data.artifacts.length, 1) * 52;
+        return {w: 380, h};
+    }
+
+    if (node.type === "inputsNode") {
+        const inputsNode = node as InputsNode;
+        const h = 120 + Math.max(inputsNode.data.variables.length, 1) * 52;
+        return {w: 380, h};
+    }
+
+    return {w: 380, h: 220};
+};
+
+const rematerializeNode = (node: BaseNode, position: {x: number; y: number}) => {
+    if (node.type === "inputsNode") {
+        return new InputsNode(node.id, position, node.data as InputsNode["data"]);
+    }
+
+    if (node.type === "parallelNode") {
+        return new ParallelNode(node.id, position, node.data as ParallelNode["data"]);
+    }
+
+    if (node.type === "stageNode") {
+        return new StageNode(node.id, position, node.data as StageNode["data"]);
+    }
+
+    if (node.type === "conditionNode") {
+        return new ConditionNode(node.id, position, node.data as ConditionNode["data"]);
+    }
+
+    if (node.type === "terminalNode") {
+        return new TerminalNode(node.id, position, node.data as TerminalNode["data"]);
+    }
+
+    node.position = position;
+    return node;
+};
+
+export const autoLayoutNodes = (
+    nodes: BaseNode[],
+    edges: BaseEdge[],
+    cfg: Partial<LayoutConfig> = {},
+) => {
+    const config: LayoutConfig = {...DEFAULT_LAYOUT_CONFIG, ...cfg};
+    const graph = new dagre.graphlib.Graph();
+    graph.setDefaultEdgeLabel(() => ({}));
+    graph.setGraph({
+        rankdir: "TB",
+        nodesep: config.nodesep,
+        ranksep: config.ranksep,
+    });
+
+    nodes.forEach((node) => {
+        const size = estimateNodeSize(node);
+        graph.setNode(node.id, {width: size.w, height: size.h});
+    });
+
+    const flowEdges = edges.filter((edge) => edge.type === "orderEdge");
+    flowEdges.forEach((edge) => {
+        if (!graph.node(edge.source) || !graph.node(edge.target)) return;
+        graph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(graph);
+
+    const positionedById = new Map<string, BaseNode>();
+    const fallbackBaseX = 150;
+    const fallbackBaseY = 80;
+    const fallbackXGap = 360;
+    const fallbackYGap = 220;
+
+    nodes.forEach((node, index) => {
+        const layoutNode = graph.node(node.id);
+        const size = estimateNodeSize(node);
+        const x = typeof layoutNode?.x === "number"
+            ? layoutNode.x - size.w / 2
+            : fallbackBaseX + (index % 5) * fallbackXGap;
+        const y = typeof layoutNode?.y === "number"
+            ? layoutNode.y - size.h / 2
+            : fallbackBaseY + index * fallbackYGap;
+
+        positionedById.set(node.id, rematerializeNode(node, {x, y}));
+    });
+
+    const outgoingBySource = new Map<string, BaseEdge[]>();
+    flowEdges.forEach((edge) => {
+        if (!outgoingBySource.has(edge.source)) {
+            outgoingBySource.set(edge.source, []);
         }
+        outgoingBySource.get(edge.source)!.push(edge);
     });
 
-    const layers = new Map<number, string[]>();
-    nodeIds.forEach((id) => {
-        const level = levels.get(id) ?? 0;
-        const list = layers.get(level) ?? [];
-        list.push(id);
-        layers.set(level, list);
-    });
+    nodes.forEach((node) => {
+        if (node.type !== "conditionNode") return;
 
-    const xGap = 420;
-    const yGap = 320;
+        const sourceNode = positionedById.get(node.id);
+        if (!sourceNode) return;
 
-    const positioned = new Map<string, {x: number; y: number}>();
-    Array.from(layers.entries())
-        .sort((a, b) => a[0] - b[0])
-        .forEach(([level, ids]) => {
-            ids.forEach((id, i) => {
-                positioned.set(id, {x: i * xGap, y: level * yGap});
-            });
+        const out = outgoingBySource.get(node.id) ?? [];
+        const leftTargets: string[] = [];
+        const rightTargets: string[] = [];
+
+        out.forEach((edge) => {
+            const label = String(edge.label ?? "").toLowerCase();
+            if (label.includes("true")) {
+                leftTargets.push(edge.target);
+                return;
+            }
+            if (label.includes("false") || label.includes("else")) {
+                rightTargets.push(edge.target);
+            }
         });
 
-    return nodes.map((node) => {
-        const nextPos = positioned.get(node.id) ?? node.position;
+        const unassigned = out
+            .map((edge) => edge.target)
+            .filter((target) => !leftTargets.includes(target) && !rightTargets.includes(target));
+        unassigned.forEach((target, index) => {
+            if (index % 2 === 0) {
+                leftTargets.push(target);
+                return;
+            }
+            rightTargets.push(target);
+        });
 
-        if (node.type === "inputsNode") {
-            return new InputsNode(node.id, nextPos, node.data as InputsNode["data"]);
-        }
+        leftTargets.forEach((targetId) => {
+            const targetNode = positionedById.get(targetId);
+            if (!targetNode) return;
+            targetNode.position = {
+                x: sourceNode.position.x - config.branchOffset,
+                y: targetNode.position.y,
+            };
+        });
 
-        if (node.type === "parallelNode") {
-            return new ParallelNode(node.id, nextPos, node.data as ParallelNode["data"]);
-        }
-
-        if (node.type === "stageNode") {
-            return new StageNode(node.id, nextPos, node.data as StageNode["data"]);
-        }
-
-        node.position = nextPos;
-        return node;
+        rightTargets.forEach((targetId) => {
+            const targetNode = positionedById.get(targetId);
+            if (!targetNode) return;
+            targetNode.position = {
+                x: sourceNode.position.x + config.branchOffset,
+                y: targetNode.position.y,
+            };
+        });
     });
+
+    return nodes.map((node) => positionedById.get(node.id) ?? node);
 };
+

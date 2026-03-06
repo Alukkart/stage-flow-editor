@@ -5,6 +5,8 @@ import {ParallelNode} from "@/core/nodes/parallelNode";
 import {StageNode} from "@/core/nodes/stageNode";
 import {DataEdge} from "@/core/edges/dataEdge";
 import {OrderEdge} from "@/core/edges/orderEdge";
+import {ConditionNode} from "@/core/nodes/conditionNode";
+import {TerminalNode} from "@/core/nodes/terminalNode";
 
 export const GRAPH_STORAGE_KEY = "stage-flow-editor.graph";
 
@@ -23,6 +25,12 @@ type SerializedEdge = {
     sourceHandle: string;
     targetHandle: string;
     data?: Record<string, unknown>;
+    className?: string;
+    label?: string;
+    style?: Record<string, unknown>;
+    animated?: boolean;
+    markerEnd?: BaseEdge["markerEnd"];
+    hidden?: boolean;
 };
 
 export type SerializedGraph = {
@@ -45,6 +53,12 @@ export const serializeGraph = (nodes: BaseNode[], edges: BaseEdge[]): Serialized
         sourceHandle: edge.sourceHandle,
         targetHandle: edge.targetHandle,
         data: edge.data,
+        className: edge.className,
+        label: edge.label,
+        style: edge.style,
+        animated: edge.animated,
+        markerEnd: edge.markerEnd,
+        hidden: edge.hidden,
     })),
 });
 
@@ -63,22 +77,42 @@ export const deserializeGraph = (graph: SerializedGraph) => {
 
         if (node.type === "stageNode") {
             nodes.push(new StageNode(node.id, node.position, node.data as StageNode["data"]));
+            return;
+        }
+
+        if (node.type === "conditionNode") {
+            nodes.push(new ConditionNode(node.id, node.position, node.data as ConditionNode["data"]));
+            return;
+        }
+
+        if (node.type === "terminalNode") {
+            nodes.push(new TerminalNode(node.id, node.position, node.data as TerminalNode["data"]));
         }
     });
 
     const edges: BaseEdge[] = [];
     graph.edges.forEach((edge) => {
         if (edge.type === "orderEdge") {
-            edges.push(
-                new OrderEdge(edge.id, edge.source, edge.target, edge.sourceHandle, edge.targetHandle, edge.data ?? {})
-            );
+            const restored = new OrderEdge(edge.id, edge.source, edge.target, edge.sourceHandle, edge.targetHandle, edge.data ?? {});
+            restored.className = edge.className;
+            restored.label = edge.label;
+            restored.style = edge.style;
+            restored.animated = edge.animated;
+            restored.markerEnd = edge.markerEnd;
+            restored.hidden = edge.hidden;
+            edges.push(restored);
             return;
         }
 
         if (edge.type === "dataEdge") {
-            edges.push(
-                new DataEdge(edge.id, edge.source, edge.target, edge.sourceHandle, edge.targetHandle, edge.data ?? {})
-            );
+            const restored = new DataEdge(edge.id, edge.source, edge.target, edge.sourceHandle, edge.targetHandle, edge.data ?? {});
+            restored.className = edge.className;
+            restored.label = edge.label;
+            restored.style = edge.style;
+            restored.animated = edge.animated;
+            restored.markerEnd = edge.markerEnd;
+            restored.hidden = edge.hidden;
+            edges.push(restored);
         }
     });
 

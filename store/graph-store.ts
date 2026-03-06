@@ -118,10 +118,18 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     },
 
     onConnect: (conn: Connection) => {
-        controller.connect(conn)
+        try {
+            controller.connect(conn)
+        } catch (error) {
+            console.error("Failed to connect nodes", error);
+            if (typeof window !== "undefined") {
+                alert(error instanceof Error ? error.message : "Connection error");
+            }
+        }
 
         set({
             edges: [...controller.Edges],
+            nodes: [...controller.Nodes],
         });
     },
 
